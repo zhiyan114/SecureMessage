@@ -43,7 +43,7 @@ void RandByte(unsigned char* RandFilling,int size) {
     }
 }
 const EVP_CIPHER * CheckKeyLen(QWidget *parent,QString UserInput) {
-    switch(UserInput.length()) {
+    switch(UserInput.toUtf8().size()) {
         case 16:
              return EVP_aes_128_gcm();
         case 24:
@@ -54,7 +54,7 @@ const EVP_CIPHER * CheckKeyLen(QWidget *parent,QString UserInput) {
             QMessageBox * msg = new QMessageBox(parent);
             msg->setWindowTitle("Invalid Key Length");
             msg->setIcon(QMessageBox::Icon::Critical);
-            msg->setText("Invalid Key Length, must be 16, 24, or 32 characters long");
+            msg->setText("Invalid Key Length, must be 16, 24, or 32 characters long. Your Key's byte size: "+QString::fromStdString(std::to_string(UserInput.toUtf8().size())));
             msg->exec();
             delete msg;
             msg = nullptr;
@@ -70,7 +70,7 @@ void MainWindow::on_EncryptBtn_clicked()
         return;
     }
     EVP_CIPHER_CTX * ctx = EVP_CIPHER_CTX_new();
-    EVP_EncryptInit_ex(ctx, CipherMode, NULL, reinterpret_cast<const unsigned char*>(ui->KeyInput->text().toStdString().c_str()), IV);
+    EVP_EncryptInit_ex(ctx, CipherMode, NULL, reinterpret_cast<const unsigned char*>(ui->KeyInput->text().constData()), IV);
     unsigned char* CipherTxt = new unsigned char[strlen(ui->EncInput->toPlainText().toStdString().c_str())+16];
     int CipherSize;
     EVP_EncryptUpdate(ctx, CipherTxt, &CipherSize, (unsigned char*)ui->EncInput->toPlainText().toStdString().c_str(), strlen(ui->EncInput->toPlainText().toStdString().c_str()));
@@ -113,7 +113,7 @@ void MainWindow::on_DecryptBtn_clicked()
     qDebug() << strlen(MainTag);
     */
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-    EVP_DecryptInit_ex(ctx, CipherMode, NULL, reinterpret_cast<const unsigned char*>(ui->KeyInput->text().toStdString().c_str()), reinterpret_cast<const unsigned char*>(IV.data()));
+    EVP_DecryptInit_ex(ctx, CipherMode, NULL, reinterpret_cast<const unsigned char*>(ui->KeyInput->text().constData()), reinterpret_cast<const unsigned char*>(IV.data()));
     unsigned char* PlainTxt = new unsigned char[MainData.length()];
     int OutputLen;
     EVP_DecryptUpdate(ctx, PlainTxt, &OutputLen, reinterpret_cast<const unsigned char*>(MainData.data()), MainData.length());
