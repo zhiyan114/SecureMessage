@@ -2,8 +2,6 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <openssl/bio.h>
-#include <openssl/evp.h>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -26,8 +24,9 @@ private slots:
 
     void on_DecClear_clicked();
 
+    void on_GenRSAKey_clicked();
+
 private:
     Ui::MainWindow *ui;
-    const EVP_CIPHER * CipherType;
 };
 #endif // MAINWINDOW_H

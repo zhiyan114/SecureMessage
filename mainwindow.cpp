@@ -4,6 +4,9 @@
 #include <ctime>
 #include <stdio.h>
 #include <process.h>
+#include <openssl/bio.h>
+#include <openssl/evp.h>
+#include <openssl/rsa.h>
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -165,5 +168,37 @@ void MainWindow::on_DecClear_clicked()
         // Dont do it
         break;
     }
+}
+
+void MainWindow::on_GenRSAKey_clicked()
+{
+    QMessageBox * msgbox = new QMessageBox(this);
+    msgbox->setWindowTitle("RSA Key Generation");
+    RSA* RSAData = RSA_new();
+    BIGNUM * BigNum = BN_new();
+    BN_set_word(BigNum, RSA_F4);
+    if(RSA_generate_key_ex(RSAData,std::stoi(ui->GenKeySize->text().toStdString()),BigNum,NULL) == NULL) {
+        msgbox->setText("RSA Key has failed to generate, please try again");
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->exec();
+        delete msgbox;
+        return;
+    }
+    EVP_PKEY * RSAKey = EVP_PKEY_new();
+    EVP_PKEY_assign_RSA(RSAKey, RSAData);
+    unsigned char PriKey;
+    size_t PriKeyLen;
+    EVP_PKEY_get_raw_private_key(RSAKey,&PriKey,&PriKeyLen);
+    unsigned char PubKey;
+    size_t PubKeyLen;
+    EVP_PKEY_get_raw_public_key(RSAKey,&PubKey,&PubKeyLen);
+    EVP_PKEY_free(RSAKey);
+    ui->PrivateKeyInput->setPlainText(QString::fromStdString("-----BEGIN RSA PRIVATE KEY-----\n")+QString::fromUtf8(QByteArray::fromRawData(reinterpret_cast<char*>(PriKey),PriKeyLen).toBase64())+QString::fromStdString("\n-----END RSA PRIVATE KEY-----"));
+    ui->PublicKeyInput->setPlainText(QString::fromStdString("-----BEGIN PUBLIC KEY-----\n")+QString::fromUtf8(QByteArray::fromRawData(reinterpret_cast<char*>(PubKey),PubKeyLen).toBase64())+QString::fromStdString("\n-----BEGIN PUBLIC KEY-----"));
+    msgbox->setText("RSA Key has been successfully generated");
+    msgbox->setIcon(QMessageBox::Icon::Information);
+    msgbox->exec();
+    delete msgbox;
+
 }
 
