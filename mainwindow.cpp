@@ -177,7 +177,8 @@ void MainWindow::on_GenRSAKey_clicked()
     RSA* RSAData = RSA_new();
     BIGNUM * BigNum = BN_new();
     BN_set_word(BigNum, RSA_F4);
-    if(RSA_generate_key_ex(RSAData,std::stoi(ui->GenKeySize->text().toStdString()),BigNum,NULL) == NULL) {
+    int UserKeySize = std::stoi(ui->GenKeySize->text().toStdString());
+    if(RSA_generate_key_ex(RSAData,UserKeySize,BigNum,NULL) == 0) {
         msgbox->setText("RSA Key has failed to generate, please try again");
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
@@ -185,19 +186,33 @@ void MainWindow::on_GenRSAKey_clicked()
         return;
     }
     EVP_PKEY * RSAKey = EVP_PKEY_new();
-    EVP_PKEY_assign_RSA(RSAKey, RSAData);
-    unsigned char PriKey;
-    size_t PriKeyLen;
-    EVP_PKEY_get_raw_private_key(RSAKey,&PriKey,&PriKeyLen);
-    unsigned char PubKey;
-    size_t PubKeyLen;
-    EVP_PKEY_get_raw_public_key(RSAKey,&PubKey,&PubKeyLen);
-    EVP_PKEY_free(RSAKey);
-    ui->PrivateKeyInput->setPlainText(QString::fromStdString("-----BEGIN RSA PRIVATE KEY-----\n")+QString::fromUtf8(QByteArray::fromRawData(reinterpret_cast<char*>(PriKey),PriKeyLen).toBase64())+QString::fromStdString("\n-----END RSA PRIVATE KEY-----"));
-    ui->PublicKeyInput->setPlainText(QString::fromStdString("-----BEGIN PUBLIC KEY-----\n")+QString::fromUtf8(QByteArray::fromRawData(reinterpret_cast<char*>(PubKey),PubKeyLen).toBase64())+QString::fromStdString("\n-----BEGIN PUBLIC KEY-----"));
+    if(EVP_PKEY_assign_RSA(RSAKey, RSAData) == 0) {
+        msgbox->setText("Key Assignment Failed");
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->exec();
+        delete msgbox;
+        return;
+    }
+    unsigned char *PriKey = new unsigned char[UserKeySize/8];
+    size_t PriKeyLen = UserKeySize/8;
+    if(EVP_PKEY_get_raw_private_key(RSAKey,PriKey,&PriKeyLen) == 0) {
+        msgbox->setText("Failed To Export Private Key");
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->exec();
+        delete msgbox;
+        return;
+    }
+    //unsigned char PubKey;
+    //size_t PubKeyLen;
+    //EVP_PKEY_get_raw_public_key(RSAKey,&PubKey,&PubKeyLen);
+    qDebug() << PriKeyLen;
+    QByteArray * MainPrikey = new QByteArray(reinterpret_cast<char*>(PriKey),PriKeyLen);
+    ui->PrivateKeyInput->setPlainText(QString::fromStdString("-----BEGIN RSA PRIVATE KEY-----\n")+QString::fromUtf8(MainPrikey->toBase64())+QString::fromStdString("\n-----END RSA PRIVATE KEY-----"));
+    //ui->PublicKeyInput->setPlainText(QString::fromStdString("-----BEGIN PUBLIC KEY-----\n")+QString::fromUtf8(QByteArray::fromRawData(reinterpret_cast<char*>(PubKey),PubKeyLen).toBase64())+QString::fromStdString("\n-----BEGIN PUBLIC KEY-----"));
     msgbox->setText("RSA Key has been successfully generated");
     msgbox->setIcon(QMessageBox::Icon::Information);
     msgbox->exec();
+    EVP_PKEY_free(RSAKey);
     delete msgbox;
 
 }
