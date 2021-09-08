@@ -102,6 +102,7 @@ void MainWindow::on_DecryptBtn_clicked()
         msg->setIcon(QMessageBox::Critical);
         msg->exec();
         delete msg;
+        return;
     }
     QByteArray IV = DataByte.sliced(0,12);
     QByteArray MainData = DataByte.sliced(12,DataByte.size()-28);
