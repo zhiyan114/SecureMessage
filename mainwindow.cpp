@@ -227,7 +227,7 @@ void MainWindow::on_GenRSAKey_clicked()
         return;
     }
     BIO* PriKeyBio = BIO_new(BIO_s_mem());
-    if(PEM_write_bio_RSAPrivateKey(PriKeyBio, RSAData,NULL,NULL,0,NULL,NULL) == 0) {
+    if(PEM_write_bio_PKCS8PrivateKey(PriKeyBio, RSAKey,NULL,NULL,0,NULL,NULL) == 0) {
         msgbox->setText("Failed To Export Private Key");
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
