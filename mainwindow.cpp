@@ -280,7 +280,6 @@ void MainWindow::on_REncryptBtn_clicked()
     RSA* PubKeyRSA = PEM_read_bio_RSAPublicKey(PubKeyBio,NULL,NULL,NULL); //PEM_read_bio_PUBKEY(PubKeyBio,NULL,NULL,NULL);
     EVP_PKEY * PubKey = EVP_PKEY_new();
     EVP_PKEY_assign_RSA(PubKey, PubKeyRSA);
-    qDebug() << EVP_PKEY_size(PubKey);
     EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(PubKey,NULL);
     if(EVP_PKEY_encrypt_init(ctx) <=0) {
         msgbox.setIcon(QMessageBox::Icon::Critical);
@@ -290,7 +289,7 @@ void MainWindow::on_REncryptBtn_clicked()
         EVP_PKEY_CTX_free(ctx);
         return;
     }
-    if(EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING) <=0) {
+    if(EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_PADDING) <=0) {
         msgbox.setIcon(QMessageBox::Icon::Critical);
         msgbox.setText("Padding Mode Failed");
         msgbox.exec();
@@ -311,7 +310,8 @@ void MainWindow::on_REncryptBtn_clicked()
         delete[] CipherText;
         return;
     }
-    ui->REncOutput->setPlainText(QByteArray::fromRawData((const char*)CipherText,Qdata.toUtf8().size()).toBase64());
+    qDebug() << OutSize;
+    ui->REncOutput->setPlainText(QByteArray::fromRawData((const char*)CipherText,OutSize).toBase64());
     EVP_PKEY_free(PubKey);
     EVP_PKEY_CTX_free(ctx);
     delete[] CipherText;
