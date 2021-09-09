@@ -65,6 +65,12 @@ const EVP_CIPHER * CheckKeyLen(QWidget *parent,QString UserInput) {
            return NULL;
     }
 }
+bool is_number(const std::string& s)
+{
+    std::string::const_iterator it = s.begin();
+    while (it != s.end() && std::isdigit(*it)) ++it;
+    return !s.empty() && it == s.end();
+}
 void MainWindow::on_EncryptBtn_clicked()
 {
     unsigned char* IV = new unsigned char[12];
@@ -175,10 +181,30 @@ void MainWindow::on_GenRSAKey_clicked()
 {
     QMessageBox * msgbox = new QMessageBox(this);
     msgbox->setWindowTitle("RSA Key Generation");
+    if(!is_number(ui->GenKeySize->text().toStdString())) {
+        msgbox->setText("RSA key size input is not a valid number");
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->exec();
+        delete msgbox;
+        return;
+    }
+    int UserKeySize = std::stoi(ui->GenKeySize->text().toStdString());
+    if(UserKeySize < 512) {
+        msgbox->setText("RSA key size is too small. Minimum is 512. (512 size already vulnerable to be cracked so not sure why you want it any smaller)");
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->exec();
+        delete msgbox;
+        return;
+    } else if(UserKeySize > 16384) {
+        msgbox->setText("RSA key size is too big. Maximum size is 16384. (Why do you need such as big size key. 2048 is already enough and some software doesn't support big key sizes)");
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->exec();
+        delete msgbox;
+        return;
+    }
     RSA* RSAData = RSA_new();
     BIGNUM * BigNum = BN_new();
     BN_set_word(BigNum, RSA_F4);
-    int UserKeySize = std::stoi(ui->GenKeySize->text().toStdString());
     if(RSA_generate_key_ex(RSAData,UserKeySize,BigNum,NULL) == 0) {
         msgbox->setText("RSA Key has failed to generate, please try again");
         msgbox->setIcon(QMessageBox::Icon::Critical);
