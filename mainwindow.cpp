@@ -7,6 +7,7 @@
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
+#include <openssl/pem.h>
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -182,37 +183,57 @@ void MainWindow::on_GenRSAKey_clicked()
         msgbox->setText("RSA Key has failed to generate, please try again");
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
+        BN_free(BigNum);
         delete msgbox;
         return;
     }
+
     EVP_PKEY * RSAKey = EVP_PKEY_new();
     if(EVP_PKEY_assign_RSA(RSAKey, RSAData) == 0) {
         msgbox->setText("Key Assignment Failed");
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
+        EVP_PKEY_free(RSAKey);
+        BN_free(BigNum);
         delete msgbox;
         return;
     }
-    unsigned char *PriKey = new unsigned char[UserKeySize/8];
-    size_t PriKeyLen = UserKeySize/8;
-    if(EVP_PKEY_get_raw_private_key(RSAKey,PriKey,&PriKeyLen) == 0) {
+    BIO* PriKeyBio = BIO_new(BIO_s_mem());
+    if(PEM_write_bio_PKCS8PrivateKey(PriKeyBio, RSAKey,NULL,NULL,0,NULL,NULL) == 0) {
         msgbox->setText("Failed To Export Private Key");
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
+        EVP_PKEY_free(RSAKey);
+        BN_free(BigNum);
         delete msgbox;
+        BIO_free_all(PriKeyBio);
         return;
     }
-    //unsigned char PubKey;
-    //size_t PubKeyLen;
-    //EVP_PKEY_get_raw_public_key(RSAKey,&PubKey,&PubKeyLen);
-    qDebug() << PriKeyLen;
-    QByteArray * MainPrikey = new QByteArray(reinterpret_cast<char*>(PriKey),PriKeyLen);
-    ui->PrivateKeyInput->setPlainText(QString::fromStdString("-----BEGIN RSA PRIVATE KEY-----\n")+QString::fromUtf8(MainPrikey->toBase64())+QString::fromStdString("\n-----END RSA PRIVATE KEY-----"));
-    //ui->PublicKeyInput->setPlainText(QString::fromStdString("-----BEGIN PUBLIC KEY-----\n")+QString::fromUtf8(QByteArray::fromRawData(reinterpret_cast<char*>(PubKey),PubKeyLen).toBase64())+QString::fromStdString("\n-----BEGIN PUBLIC KEY-----"));
+    BIO* PubKeyBio = BIO_new(BIO_s_mem());
+    if(PEM_write_bio_RSAPublicKey(PubKeyBio, RSAData) == 0) {
+        msgbox->setText("Failed To Export Public Key");
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->exec();
+        EVP_PKEY_free(RSAKey);
+        BN_free(BigNum);
+        delete msgbox;
+        BIO_free_all(PriKeyBio);
+        BIO_free_all(PubKeyBio);
+        return;
+    }
+    BUF_MEM *PriKey;
+    BUF_MEM *PubKey;
+    BIO_get_mem_ptr(PriKeyBio, &PriKey);
+    BIO_get_mem_ptr(PubKeyBio, &PubKey);
+    ui->PrivateKeyInput->setPlainText(QString::fromUtf8(PriKey->data,PriKey->length));
+    ui->PublicKeyInput->setPlainText(QString::fromUtf8(PubKey->data,PubKey->length));
     msgbox->setText("RSA Key has been successfully generated");
     msgbox->setIcon(QMessageBox::Icon::Information);
     msgbox->exec();
     EVP_PKEY_free(RSAKey);
+    BN_free(BigNum);
+    BIO_free_all(PriKeyBio);
+    BIO_free_all(PubKeyBio);
     delete msgbox;
 
 }
