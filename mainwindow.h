@@ -30,6 +30,10 @@ private slots:
 
     void on_RDecryptBtn_clicked();
 
+    void on_REncryptClear_clicked();
+
+    void on_RDecryptClear_clicked();
+
 private:
     Ui::MainWindow *ui;
 };

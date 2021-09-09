@@ -286,14 +286,16 @@ void MainWindow::on_REncryptBtn_clicked()
         msgbox.setText("Init failed");
         msgbox.exec();
         EVP_PKEY_free(PubKey);
+        BIO_free_all(PubKeyBio);
         EVP_PKEY_CTX_free(ctx);
         return;
     }
-    if(EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_PADDING) <=0) {
+    if(EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING) <=0) {
         msgbox.setIcon(QMessageBox::Icon::Critical);
         msgbox.setText("Padding Mode Failed");
         msgbox.exec();
         EVP_PKEY_free(PubKey);
+        BIO_free_all(PubKeyBio);
         EVP_PKEY_CTX_free(ctx);
         return;
     }
@@ -307,13 +309,15 @@ void MainWindow::on_REncryptBtn_clicked()
         msgbox.exec();
         EVP_PKEY_free(PubKey);
         EVP_PKEY_CTX_free(ctx);
+        BIO_free_all(PubKeyBio);
         delete[] CipherText;
         return;
     }
-    qDebug() << OutSize;
     ui->REncOutput->setPlainText(QByteArray::fromRawData((const char*)CipherText,OutSize).toBase64());
+    ui->REncInput->setPlainText("");
     EVP_PKEY_free(PubKey);
     EVP_PKEY_CTX_free(ctx);
+    BIO_free_all(PubKeyBio);
     delete[] CipherText;
     /*
     */
@@ -324,10 +328,17 @@ void MainWindow::on_RDecryptBtn_clicked()
 {
     QMessageBox msgbox;
     msgbox.setWindowTitle("RSA Decryption");
+    QByteArray Qdata = QByteArray::fromBase64(ui->RDecInput->toPlainText().toUtf8());
     BIO* PriKeyBio = BIO_new(BIO_s_mem());
     BIO_write(PriKeyBio,ui->PrivateKeyInput->toPlainText().toStdString().c_str(),ui->PrivateKeyInput->toPlainText().toUtf8().size());
-    //BIO* PubKeyBio = BIO_new_mem_buf(ui->PublicKeyInput->toPlainText().toStdString().c_str(),ui->PublicKeyInput->toPlainText().toUtf8().size());
-    RSA* PriKeyRSA = PEM_read_bio_RSAPrivateKey(PriKeyBio,NULL,NULL,NULL); //PEM_read_bio_PUBKEY(PubKeyBio,NULL,NULL,NULL);
+    RSA* PriKeyRSA = PEM_read_bio_RSAPrivateKey(PriKeyBio,NULL,NULL,NULL);
+    if(Qdata.size() != RSA_size(PriKeyRSA)) {
+        msgbox.setIcon(QMessageBox::Icon::Critical);
+        msgbox.setText("Invalid input has been supplied");
+        msgbox.exec();
+        BIO_free_all(PriKeyBio);
+        return;
+    }
     EVP_PKEY * PriKey = EVP_PKEY_new();
     EVP_PKEY_assign_RSA(PriKey, PriKeyRSA);
     EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(PriKey,NULL);
@@ -337,20 +348,20 @@ void MainWindow::on_RDecryptBtn_clicked()
         msgbox.exec();
         EVP_PKEY_free(PriKey);
         EVP_PKEY_CTX_free(ctx);
+        BIO_free_all(PriKeyBio);
         return;
     }
-    if(EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_PADDING) <=0) {
+    if(EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING) <=0) {
         msgbox.setIcon(QMessageBox::Icon::Critical);
         msgbox.setText("Padding Mode Failed");
         msgbox.exec();
         EVP_PKEY_free(PriKey);
         EVP_PKEY_CTX_free(ctx);
+        BIO_free_all(PriKeyBio);
         return;
     }
-    QByteArray Qdata = QByteArray::fromBase64(ui->RDecInput->toPlainText().toUtf8());
     size_t OutSize;
-    qDebug() << EVP_PKEY_decrypt(ctx, NULL, &OutSize, (const unsigned char*)Qdata.constData(),Qdata.size());
-    qDebug() << OutSize;
+    EVP_PKEY_decrypt(ctx, NULL, &OutSize, (const unsigned char*)Qdata.constData(),Qdata.size());
     unsigned char* PlainText = new unsigned char[OutSize];
     if(EVP_PKEY_decrypt(ctx,PlainText,&OutSize, (const unsigned char*)Qdata.constData(),Qdata.size()) <=0) {
         msgbox.setIcon(QMessageBox::Icon::Critical);
@@ -358,12 +369,43 @@ void MainWindow::on_RDecryptBtn_clicked()
         msgbox.exec();
         EVP_PKEY_free(PriKey);
         EVP_PKEY_CTX_free(ctx);
+        BIO_free_all(PriKeyBio);
         delete[] PlainText;
         return;
     }
     ui->RDecOutput->setPlainText(QByteArray::fromRawData((const char*)PlainText,OutSize));
+    ui->RDecInput->setPlainText("");
     EVP_PKEY_free(PriKey);
     EVP_PKEY_CTX_free(ctx);
+    BIO_free_all(PriKeyBio);
     delete[] PlainText;
+}
+
+
+void MainWindow::on_REncryptClear_clicked()
+{
+    switch(QMessageBox::question(this,"Clear Encryption Message","Are you sure that you want to clear your encrypted message?",QMessageBox::Yes | QMessageBox::No)) {
+       case QMessageBox::Yes:
+        // Yes Do it
+        ui->REncOutput->setPlainText("");
+        break;
+       default:
+        // Dont do it
+        break;
+    }
+}
+
+
+void MainWindow::on_RDecryptClear_clicked()
+{
+    switch(QMessageBox::question(this,"Clear Decryption Message","Are you sure that you want to clear your decrypted message?",QMessageBox::Yes | QMessageBox::No)) {
+       case QMessageBox::Yes:
+        // Yes Do it
+        ui->RDecOutput->setPlainText("");
+        break;
+       default:
+        // Dont do it
+        break;
+    }
 }
 
