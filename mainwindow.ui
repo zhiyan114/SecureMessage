@@ -265,6 +265,9 @@
          <height>241</height>
         </rect>
        </property>
+       <property name="readOnly">
+        <bool>false</bool>
+       </property>
        <property name="placeholderText">
         <string>Your Private RSA Key</string>
        </property>
@@ -330,6 +333,58 @@
       <property name="title">
        <string>Encryption</string>
       </property>
+      <widget class="QPlainTextEdit" name="REncInput">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>30</y>
+         <width>241</width>
+         <height>241</height>
+        </rect>
+       </property>
+       <property name="placeholderText">
+        <string>Your data input here</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="REncryptBtn">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>530</y>
+         <width>111</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Encrypt</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="RDecryptBtn">
+       <property name="geometry">
+        <rect>
+         <x>140</x>
+         <y>530</y>
+         <width>111</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Clear Output</string>
+       </property>
+      </widget>
+      <widget class="QPlainTextEdit" name="REncOutput">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>280</y>
+         <width>241</width>
+         <height>241</height>
+        </rect>
+       </property>
+       <property name="placeholderText">
+        <string>Your data output here</string>
+       </property>
+      </widget>
      </widget>
     </widget>
     <widget class="QWidget" name="UsageSection">

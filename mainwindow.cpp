@@ -210,6 +210,7 @@ void MainWindow::on_GenRSAKey_clicked()
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
         BN_free(BigNum);
+        //RSA_free(RSAData);
         delete msgbox;
         return;
     }
@@ -221,6 +222,7 @@ void MainWindow::on_GenRSAKey_clicked()
         msgbox->exec();
         EVP_PKEY_free(RSAKey);
         BN_free(BigNum);
+        //RSA_free(RSAData);
         delete msgbox;
         return;
     }
@@ -233,6 +235,7 @@ void MainWindow::on_GenRSAKey_clicked()
         BN_free(BigNum);
         delete msgbox;
         BIO_free_all(PriKeyBio);
+        //RSA_free(RSAData);
         return;
     }
     BIO* PubKeyBio = BIO_new(BIO_s_mem());
@@ -245,6 +248,7 @@ void MainWindow::on_GenRSAKey_clicked()
         delete msgbox;
         BIO_free_all(PriKeyBio);
         BIO_free_all(PubKeyBio);
+        //RSA_free(RSAData);
         return;
     }
     BUF_MEM *PriKey;
@@ -260,7 +264,58 @@ void MainWindow::on_GenRSAKey_clicked()
     BN_free(BigNum);
     BIO_free_all(PriKeyBio);
     BIO_free_all(PubKeyBio);
+    //RSA_free(RSAData);
     delete msgbox;
 
+}
+
+
+void MainWindow::on_REncryptBtn_clicked()
+{
+    QMessageBox msgbox;
+    msgbox.setWindowTitle("RSA Encryption");
+    BIO* PubKeyBio = BIO_new(BIO_s_mem());
+    BIO_write(PubKeyBio,ui->PublicKeyInput->toPlainText().toStdString().c_str(),ui->PublicKeyInput->toPlainText().toUtf8().size());
+    //BIO* PubKeyBio = BIO_new_mem_buf(ui->PublicKeyInput->toPlainText().toStdString().c_str(),ui->PublicKeyInput->toPlainText().toUtf8().size());
+    RSA* PubKeyRSA = PEM_read_bio_RSAPublicKey(PubKeyBio,NULL,NULL,NULL); //PEM_read_bio_PUBKEY(PubKeyBio,NULL,NULL,NULL);
+    EVP_PKEY * PubKey = EVP_PKEY_new();
+    EVP_PKEY_assign_RSA(PubKey, PubKeyRSA);
+    qDebug() << EVP_PKEY_size(PubKey);
+    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(PubKey,NULL);
+    if(EVP_PKEY_encrypt_init(ctx) <=0) {
+        msgbox.setIcon(QMessageBox::Icon::Critical);
+        msgbox.setText("Init failed");
+        msgbox.exec();
+        EVP_PKEY_free(PubKey);
+        EVP_PKEY_CTX_free(ctx);
+        return;
+    }
+    if(EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING) <=0) {
+        msgbox.setIcon(QMessageBox::Icon::Critical);
+        msgbox.setText("Padding Mode Failed");
+        msgbox.exec();
+        EVP_PKEY_free(PubKey);
+        EVP_PKEY_CTX_free(ctx);
+        return;
+    }
+    QString Qdata = ui->REncInput->toPlainText();
+    size_t OutSize;
+    EVP_PKEY_encrypt(ctx, NULL, &OutSize, (const unsigned char*)Qdata.toStdString().c_str(),Qdata.toUtf8().size());
+    unsigned char* CipherText = new unsigned char[OutSize];
+    if(EVP_PKEY_encrypt(ctx,CipherText,&OutSize, (const unsigned char*)Qdata.toStdString().c_str(),Qdata.toUtf8().size()) <=0) {
+        msgbox.setIcon(QMessageBox::Icon::Critical);
+        msgbox.setText("Encryption Mode Failed");
+        msgbox.exec();
+        EVP_PKEY_free(PubKey);
+        EVP_PKEY_CTX_free(ctx);
+        delete[] CipherText;
+        return;
+    }
+    ui->REncOutput->setPlainText(QByteArray::fromRawData((const char*)CipherText,Qdata.toUtf8().size()).toBase64());
+    EVP_PKEY_free(PubKey);
+    EVP_PKEY_CTX_free(ctx);
+    delete[] CipherText;
+    /*
+    */
 }
 

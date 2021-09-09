@@ -26,6 +26,8 @@ private slots:
 
     void on_GenRSAKey_clicked();
 
+    void on_REncryptBtn_clicked();
+
 private:
     Ui::MainWindow *ui;
 };
