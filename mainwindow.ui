@@ -320,6 +320,61 @@
       <property name="title">
        <string>Decryption</string>
       </property>
+      <widget class="QPlainTextEdit" name="RDecInput">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>30</y>
+         <width>241</width>
+         <height>241</height>
+        </rect>
+       </property>
+       <property name="placeholderText">
+        <string>Your data input here</string>
+       </property>
+      </widget>
+      <widget class="QPlainTextEdit" name="RDecOutput">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>280</y>
+         <width>241</width>
+         <height>241</height>
+        </rect>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+       <property name="placeholderText">
+        <string>Your data output here</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="RDecryptClear">
+       <property name="geometry">
+        <rect>
+         <x>140</x>
+         <y>530</y>
+         <width>111</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Clear Output</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="RDecryptBtn">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>530</y>
+         <width>111</width>
+         <height>23</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Decrypt</string>
+       </property>
+      </widget>
      </widget>
      <widget class="QGroupBox" name="groupBox_4">
       <property name="geometry">
@@ -359,7 +414,7 @@
         <string>Encrypt</string>
        </property>
       </widget>
-      <widget class="QPushButton" name="RDecryptBtn">
+      <widget class="QPushButton" name="REncryptClear">
        <property name="geometry">
         <rect>
          <x>140</x>
@@ -380,6 +435,9 @@
          <width>241</width>
          <height>241</height>
         </rect>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
        </property>
        <property name="placeholderText">
         <string>Your data output here</string>

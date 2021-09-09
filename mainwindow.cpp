@@ -227,7 +227,7 @@ void MainWindow::on_GenRSAKey_clicked()
         return;
     }
     BIO* PriKeyBio = BIO_new(BIO_s_mem());
-    if(PEM_write_bio_PKCS8PrivateKey(PriKeyBio, RSAKey,NULL,NULL,0,NULL,NULL) == 0) {
+    if(PEM_write_bio_RSAPrivateKey(PriKeyBio, RSAData,NULL,NULL,0,NULL,NULL) == 0) {
         msgbox->setText("Failed To Export Private Key");
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
@@ -239,7 +239,7 @@ void MainWindow::on_GenRSAKey_clicked()
         return;
     }
     BIO* PubKeyBio = BIO_new(BIO_s_mem());
-    if(PEM_write_bio_RSAPublicKey(PubKeyBio, RSAData) == 0) {
+    if(PEM_write_bio_RSAPublicKey(PubKeyBio,RSAData) == 0) {
         msgbox->setText("Failed To Export Public Key");
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
@@ -317,5 +317,53 @@ void MainWindow::on_REncryptBtn_clicked()
     delete[] CipherText;
     /*
     */
+}
+
+
+void MainWindow::on_RDecryptBtn_clicked()
+{
+    QMessageBox msgbox;
+    msgbox.setWindowTitle("RSA Decryption");
+    BIO* PriKeyBio = BIO_new(BIO_s_mem());
+    BIO_write(PriKeyBio,ui->PrivateKeyInput->toPlainText().toStdString().c_str(),ui->PrivateKeyInput->toPlainText().toUtf8().size());
+    //BIO* PubKeyBio = BIO_new_mem_buf(ui->PublicKeyInput->toPlainText().toStdString().c_str(),ui->PublicKeyInput->toPlainText().toUtf8().size());
+    RSA* PriKeyRSA = PEM_read_bio_RSAPrivateKey(PriKeyBio,NULL,NULL,NULL); //PEM_read_bio_PUBKEY(PubKeyBio,NULL,NULL,NULL);
+    EVP_PKEY * PriKey = EVP_PKEY_new();
+    EVP_PKEY_assign_RSA(PriKey, PriKeyRSA);
+    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(PriKey,NULL);
+    if(EVP_PKEY_decrypt_init(ctx) <=0) {
+        msgbox.setIcon(QMessageBox::Icon::Critical);
+        msgbox.setText("Init failed");
+        msgbox.exec();
+        EVP_PKEY_free(PriKey);
+        EVP_PKEY_CTX_free(ctx);
+        return;
+    }
+    if(EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_PADDING) <=0) {
+        msgbox.setIcon(QMessageBox::Icon::Critical);
+        msgbox.setText("Padding Mode Failed");
+        msgbox.exec();
+        EVP_PKEY_free(PriKey);
+        EVP_PKEY_CTX_free(ctx);
+        return;
+    }
+    QByteArray Qdata = QByteArray::fromBase64(ui->RDecInput->toPlainText().toUtf8());
+    size_t OutSize;
+    qDebug() << EVP_PKEY_decrypt(ctx, NULL, &OutSize, (const unsigned char*)Qdata.constData(),Qdata.size());
+    qDebug() << OutSize;
+    unsigned char* PlainText = new unsigned char[OutSize];
+    if(EVP_PKEY_decrypt(ctx,PlainText,&OutSize, (const unsigned char*)Qdata.constData(),Qdata.size()) <=0) {
+        msgbox.setIcon(QMessageBox::Icon::Critical);
+        msgbox.setText("Decryption Mode Failed");
+        msgbox.exec();
+        EVP_PKEY_free(PriKey);
+        EVP_PKEY_CTX_free(ctx);
+        delete[] PlainText;
+        return;
+    }
+    ui->RDecOutput->setPlainText(QByteArray::fromRawData((const char*)PlainText,OutSize));
+    EVP_PKEY_free(PriKey);
+    EVP_PKEY_CTX_free(ctx);
+    delete[] PlainText;
 }
 
