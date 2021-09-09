@@ -447,7 +447,7 @@
     </widget>
     <widget class="QWidget" name="UsageSection">
      <attribute name="title">
-      <string>Usage/Software Information</string>
+      <string>Software Usage/Information</string>
      </attribute>
      <widget class="QLabel" name="label">
       <property name="geometry">
