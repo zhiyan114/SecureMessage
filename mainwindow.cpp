@@ -278,6 +278,14 @@ void MainWindow::on_REncryptBtn_clicked()
     BIO_write(PubKeyBio,ui->PublicKeyInput->toPlainText().toStdString().c_str(),ui->PublicKeyInput->toPlainText().toUtf8().size());
     //BIO* PubKeyBio = BIO_new_mem_buf(ui->PublicKeyInput->toPlainText().toStdString().c_str(),ui->PublicKeyInput->toPlainText().toUtf8().size());
     RSA* PubKeyRSA = PEM_read_bio_RSAPublicKey(PubKeyBio,NULL,NULL,NULL); //PEM_read_bio_PUBKEY(PubKeyBio,NULL,NULL,NULL);
+    QString Qdata = ui->REncInput->toPlainText();
+    if(Qdata.toUtf8().size() > RSA_size(PubKeyRSA)-42) {
+        msgbox.setIcon(QMessageBox::Icon::Critical);
+        msgbox.setText("Message to big for your current key size. Maximum message byte: "+QString::number(RSA_size(PubKeyRSA)-42));
+        msgbox.exec();
+        BIO_free_all(PubKeyBio);
+        return;
+    }
     EVP_PKEY * PubKey = EVP_PKEY_new();
     EVP_PKEY_assign_RSA(PubKey, PubKeyRSA);
     EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(PubKey,NULL);
@@ -299,7 +307,6 @@ void MainWindow::on_REncryptBtn_clicked()
         EVP_PKEY_CTX_free(ctx);
         return;
     }
-    QString Qdata = ui->REncInput->toPlainText();
     size_t OutSize;
     EVP_PKEY_encrypt(ctx, NULL, &OutSize, (const unsigned char*)Qdata.toStdString().c_str(),Qdata.toUtf8().size());
     unsigned char* CipherText = new unsigned char[OutSize];
