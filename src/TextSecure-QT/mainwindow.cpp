@@ -416,3 +416,34 @@ void MainWindow::on_RDecryptClear_clicked()
     }
 }
 
+
+void MainWindow::on_PriToPubKeyBtn_clicked()
+{
+    QMessageBox *msgbox = new QMessageBox(this);
+    msgbox->setWindowTitle("Key Converter");
+    QByteArray Qdata = QByteArray::fromBase64(ui->RDecInput->toPlainText().toUtf8());
+    BIO* PriKeyBio = BIO_new(BIO_s_mem());
+    BIO_write(PriKeyBio,ui->PrivateKeyInput->toPlainText().toStdString().c_str(),ui->PrivateKeyInput->toPlainText().toUtf8().size());
+    RSA* PriKeyRSA = PEM_read_bio_RSAPrivateKey(PriKeyBio,NULL,NULL,NULL);
+    BIO* PubKeyBio = BIO_new(BIO_s_mem());
+    if(PEM_write_bio_RSAPublicKey(PubKeyBio,PriKeyRSA) <= 0) {
+        msgbox->setText("Failed To Convert Private Key To Public Key");
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->exec();
+        delete msgbox;
+        BIO_free_all(PriKeyBio);
+        BIO_free_all(PubKeyBio);
+        //RSA_free(RSAData);
+        return;
+    }
+    BUF_MEM *PubKey;
+    BIO_get_mem_ptr(PubKeyBio, &PubKey);
+    ui->PublicKeyInput->setPlainText(QString::fromUtf8(PubKey->data,PubKey->length));
+    msgbox->setIcon(QMessageBox::Icon::Information);
+    msgbox->setText("Successfully extract public key from private key");
+    msgbox->exec();
+    delete msgbox;
+    BIO_free_all(PriKeyBio);
+    BIO_free_all(PubKeyBio);
+}
+

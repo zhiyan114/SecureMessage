@@ -34,6 +34,8 @@ private slots:
 
     void on_RDecryptClear_clicked();
 
+    void on_PriToPubKeyBtn_clicked();
+
 private:
     Ui::MainWindow *ui;
 };
