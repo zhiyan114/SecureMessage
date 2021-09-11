@@ -346,10 +346,10 @@ void MainWindow::on_RDecryptBtn_clicked()
     QByteArray Qdata = QByteArray::fromBase64(ui->RDecInput->toPlainText().toUtf8());
     BIO* PriKeyBio = BIO_new(BIO_s_mem());
     BIO_write(PriKeyBio,ui->PrivateKeyInput->toPlainText().toStdString().c_str(),ui->PrivateKeyInput->toPlainText().toUtf8().size());
-    RSA* PriKeyRSA = PEM_read_bio_RSAPrivateKey(PriKeyBio,NULL,NULL,NULL);
+    RSA* PriKeyRSA = PEM_read_bio_RSAPrivateKey(PriKeyBio,NULL,NULL,const_cast<char*>(""));
     if(PriKeyRSA == NULL) {
         msgbox.setIcon(QMessageBox::Icon::Critical);
-        msgbox.setText("Invalid RSA Public key was provided");
+        msgbox.setText("Invalid RSA Private key was provided or the key isn't decrypted");
         msgbox.exec();
         BIO_free_all(PriKeyBio);
         return;
@@ -438,7 +438,7 @@ void MainWindow::on_PriToPubKeyBtn_clicked()
     msgbox->setWindowTitle("Key Converter");
     BIO* PriKeyBio = BIO_new(BIO_s_mem());
     BIO_write(PriKeyBio,ui->PrivateKeyInput->toPlainText().toStdString().c_str(),ui->PrivateKeyInput->toPlainText().toUtf8().size());
-    RSA* PriKeyRSA = PEM_read_bio_RSAPrivateKey(PriKeyBio,NULL,NULL,NULL);
+    RSA* PriKeyRSA = PEM_read_bio_RSAPrivateKey(PriKeyBio,NULL,NULL,const_cast<char*>(""));
     BIO* PubKeyBio = BIO_new(BIO_s_mem());
     if(PEM_write_bio_RSAPublicKey(PubKeyBio,PriKeyRSA) <= 0) {
         msgbox->setText("Failed To Convert Private Key To Public Key");
@@ -498,7 +498,7 @@ void MainWindow::on_ImportPubCert_clicked()
     msgbox->exec();
     delete msgbox;
 }
-
+int cb(char *buf, int size, int rwflag, void *u);
 
 void MainWindow::on_PriKeyEncBtn_clicked()
 {
@@ -506,11 +506,12 @@ void MainWindow::on_PriKeyEncBtn_clicked()
     msgbox->setWindowTitle("Key Encryptor");
     BIO* PriKeyBio = BIO_new(BIO_s_mem());
     BIO_write(PriKeyBio,ui->PrivateKeyInput->toPlainText().toStdString().c_str(),ui->PrivateKeyInput->toPlainText().toUtf8().size());
-    RSA* PriKeyRSA = PEM_read_bio_RSAPrivateKey(PriKeyBio,NULL,NULL,NULL);
+
+    RSA* PriKeyRSA = PEM_read_bio_RSAPrivateKey(PriKeyBio,NULL,NULL,const_cast<char*>(""));
     BIO* EncPriKeyBio = BIO_new(BIO_s_mem());
     EVP_PKEY * RSAKey = EVP_PKEY_new();
     if(EVP_PKEY_assign_RSA(RSAKey, PriKeyRSA) <= 0) {
-        msgbox->setText("Invalid Private Key");
+        msgbox->setText("Invalid RSA Private key was provided or you're trying to encrypt an already encrypted key");
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
         EVP_PKEY_free(RSAKey);
