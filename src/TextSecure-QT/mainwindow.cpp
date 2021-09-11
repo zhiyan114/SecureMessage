@@ -8,6 +8,7 @@
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
+#include <openssl/x509.h>
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -445,5 +446,36 @@ void MainWindow::on_PriToPubKeyBtn_clicked()
     delete msgbox;
     BIO_free_all(PriKeyBio);
     BIO_free_all(PubKeyBio);
+}
+
+
+void MainWindow::on_ImportPubCert_clicked()
+{
+    QMessageBox *msgbox = new QMessageBox(this);
+    msgbox->setWindowTitle("Key Converter");
+    BIO* CertKeyBio = BIO_new(BIO_s_mem());
+    BIO_write(CertKeyBio,ui->PublicCertInput->toPlainText().toStdString().c_str(),ui->PublicCertInput->toPlainText().toUtf8().size());
+    X509 * PubCert = PEM_read_bio_X509(CertKeyBio,NULL,NULL,NULL);
+    EVP_PKEY * PubKeyObj = X509_get_pubkey(PubCert);
+
+    BUF_MEM *PubKey;
+    BIO* PubKeyBio = BIO_new(BIO_s_mem());
+    RSA* PubKeyRSA = EVP_PKEY_get1_RSA(PubKeyObj);
+    if(PEM_write_bio_RSAPublicKey(PubKeyBio,PubKeyRSA)  <= 0) {
+        msgbox->setText("Unable to convert certificate to public key");
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->exec();
+        delete msgbox;
+    }
+
+    BIO_get_mem_ptr(PubKeyBio, &PubKey);
+    ui->PublicKeyInput->setPlainText(QString::fromUtf8(PubKey->data,PubKey->length));
+    BIO_free_all(CertKeyBio);
+    BIO_free_all(PubKeyBio);
+    X509_free(PubCert);
+    msgbox->setText("Successfully converted public certificate to public key");
+    msgbox->setIcon(QMessageBox::Icon::Information);
+    msgbox->exec();
+    delete msgbox;
 }
 

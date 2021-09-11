@@ -36,6 +36,8 @@ private slots:
 
     void on_PriToPubKeyBtn_clicked();
 
+    void on_ImportPubCert_clicked();
+
 private:
     Ui::MainWindow *ui;
 };

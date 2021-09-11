@@ -203,7 +203,7 @@
         <string>Your Public RSA Certificate</string>
        </property>
       </widget>
-      <widget class="QPushButton" name="pushButton_3">
+      <widget class="QPushButton" name="ImportPubCert">
        <property name="geometry">
         <rect>
          <x>120</x>
