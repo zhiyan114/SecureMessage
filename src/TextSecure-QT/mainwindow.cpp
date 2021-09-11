@@ -573,7 +573,7 @@ void MainWindow::on_PriKeyDecBtn_clicked()
     BIO_get_mem_ptr(EncPriKeyBio, &EncPriKey);
     ui->PrivateKeyInput->setPlainText(QString::fromUtf8(EncPriKey->data,EncPriKey->length));
     msgbox->setIcon(QMessageBox::Icon::Information);
-    msgbox->setText("Successfully encrypted your private key");
+    msgbox->setText("Successfully decrypted your private key");
     msgbox->exec();
     delete msgbox;
     BIO_free_all(PriKeyBio);
