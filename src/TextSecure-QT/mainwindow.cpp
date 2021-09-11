@@ -280,6 +280,13 @@ void MainWindow::on_REncryptBtn_clicked()
     //BIO* PubKeyBio = BIO_new_mem_buf(ui->PublicKeyInput->toPlainText().toStdString().c_str(),ui->PublicKeyInput->toPlainText().toUtf8().size());
     RSA* PubKeyRSA = PEM_read_bio_RSAPublicKey(PubKeyBio,NULL,NULL,NULL); //PEM_read_bio_PUBKEY(PubKeyBio,NULL,NULL,NULL);
     QString Qdata = ui->REncInput->toPlainText();
+    if(PubKeyRSA == NULL) {
+        msgbox.setIcon(QMessageBox::Icon::Critical);
+        msgbox.setText("Invalid RSA Public key was provided");
+        msgbox.exec();
+        BIO_free_all(PubKeyBio);
+        return;
+    }
     if(Qdata.toUtf8().size() > RSA_size(PubKeyRSA)-42) {
         msgbox.setIcon(QMessageBox::Icon::Critical);
         msgbox.setText("Message to big for your current key size. Maximum message byte: "+QString::number(RSA_size(PubKeyRSA)-42));
@@ -340,6 +347,13 @@ void MainWindow::on_RDecryptBtn_clicked()
     BIO* PriKeyBio = BIO_new(BIO_s_mem());
     BIO_write(PriKeyBio,ui->PrivateKeyInput->toPlainText().toStdString().c_str(),ui->PrivateKeyInput->toPlainText().toUtf8().size());
     RSA* PriKeyRSA = PEM_read_bio_RSAPrivateKey(PriKeyBio,NULL,NULL,NULL);
+    if(PriKeyRSA == NULL) {
+        msgbox.setIcon(QMessageBox::Icon::Critical);
+        msgbox.setText("Invalid RSA Public key was provided");
+        msgbox.exec();
+        BIO_free_all(PriKeyBio);
+        return;
+    }
     if(Qdata.size() != RSA_size(PriKeyRSA)) {
         msgbox.setIcon(QMessageBox::Icon::Critical);
         msgbox.setText("Invalid input has been supplied");
@@ -457,15 +471,22 @@ void MainWindow::on_ImportPubCert_clicked()
     BIO_write(CertKeyBio,ui->PublicCertInput->toPlainText().toStdString().c_str(),ui->PublicCertInput->toPlainText().toUtf8().size());
     X509 * PubCert = PEM_read_bio_X509(CertKeyBio,NULL,NULL,NULL);
     EVP_PKEY * PubKeyObj = X509_get_pubkey(PubCert);
-
     BUF_MEM *PubKey;
     BIO* PubKeyBio = BIO_new(BIO_s_mem());
+    if(PubKeyObj == NULL) {
+        msgbox->setText("Invalid Certificate was provided");
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->exec();
+        delete msgbox;
+        return;
+    }
     RSA* PubKeyRSA = EVP_PKEY_get1_RSA(PubKeyObj);
     if(PEM_write_bio_RSAPublicKey(PubKeyBio,PubKeyRSA)  <= 0) {
         msgbox->setText("Unable to convert certificate to public key");
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
         delete msgbox;
+        return;
     }
 
     BIO_get_mem_ptr(PubKeyBio, &PubKey);
