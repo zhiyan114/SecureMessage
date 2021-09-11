@@ -436,7 +436,6 @@ void MainWindow::on_PriToPubKeyBtn_clicked()
 {
     QMessageBox *msgbox = new QMessageBox(this);
     msgbox->setWindowTitle("Key Converter");
-    QByteArray Qdata = QByteArray::fromBase64(ui->RDecInput->toPlainText().toUtf8());
     BIO* PriKeyBio = BIO_new(BIO_s_mem());
     BIO_write(PriKeyBio,ui->PrivateKeyInput->toPlainText().toStdString().c_str(),ui->PrivateKeyInput->toPlainText().toUtf8().size());
     RSA* PriKeyRSA = PEM_read_bio_RSAPrivateKey(PriKeyBio,NULL,NULL,NULL);
@@ -498,5 +497,85 @@ void MainWindow::on_ImportPubCert_clicked()
     msgbox->setIcon(QMessageBox::Icon::Information);
     msgbox->exec();
     delete msgbox;
+}
+
+
+void MainWindow::on_PriKeyEncBtn_clicked()
+{
+    QMessageBox *msgbox = new QMessageBox(this);
+    msgbox->setWindowTitle("Key Encryptor");
+    BIO* PriKeyBio = BIO_new(BIO_s_mem());
+    BIO_write(PriKeyBio,ui->PrivateKeyInput->toPlainText().toStdString().c_str(),ui->PrivateKeyInput->toPlainText().toUtf8().size());
+    RSA* PriKeyRSA = PEM_read_bio_RSAPrivateKey(PriKeyBio,NULL,NULL,NULL);
+    BIO* EncPriKeyBio = BIO_new(BIO_s_mem());
+    EVP_PKEY * RSAKey = EVP_PKEY_new();
+    if(EVP_PKEY_assign_RSA(RSAKey, PriKeyRSA) <= 0) {
+        msgbox->setText("Invalid Private Key");
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->exec();
+        EVP_PKEY_free(RSAKey);
+        //RSA_free(RSAData);
+        delete msgbox;
+        return;
+    }
+    if(PEM_write_bio_PKCS8PrivateKey(EncPriKeyBio,RSAKey,EVP_des_ede3_cbc(),NULL,0,0,ui->PriKeyPassInput->text().toUtf8().data()) <= 0) {
+        msgbox->setText("Failed To Encrypt Private Key or you forgot to set a passphrase");
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->exec();
+        delete msgbox;
+        BIO_free_all(PriKeyBio);
+        BIO_free_all(EncPriKeyBio);
+        //RSA_free(RSAData);
+        return;
+    }
+    BUF_MEM *EncPriKey;
+    BIO_get_mem_ptr(EncPriKeyBio, &EncPriKey);
+    ui->PrivateKeyInput->setPlainText(QString::fromUtf8(EncPriKey->data,EncPriKey->length));
+    msgbox->setIcon(QMessageBox::Icon::Information);
+    msgbox->setText("Successfully encrypted your private key");
+    msgbox->exec();
+    delete msgbox;
+    BIO_free_all(PriKeyBio);
+    BIO_free_all(EncPriKeyBio);
+}
+
+
+void MainWindow::on_PriKeyDecBtn_clicked()
+{
+    QMessageBox *msgbox = new QMessageBox(this);
+    msgbox->setWindowTitle("Key Encryptor");
+    BIO* PriKeyBio = BIO_new(BIO_s_mem());
+    BIO_write(PriKeyBio,ui->PrivateKeyInput->toPlainText().toStdString().c_str(),ui->PrivateKeyInput->toPlainText().toUtf8().size());
+    RSA* PriKeyRSA = PEM_read_bio_RSAPrivateKey(PriKeyBio,NULL,0,ui->PriKeyPassInput->text().toUtf8().data());
+    BIO* EncPriKeyBio = BIO_new(BIO_s_mem());
+    EVP_PKEY * RSAKey = EVP_PKEY_new();
+    if(EVP_PKEY_assign_RSA(RSAKey, PriKeyRSA) <= 0) {
+        msgbox->setText("Invalid Private Key or Passphrase");
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->exec();
+        EVP_PKEY_free(RSAKey);
+        //RSA_free(RSAData);
+        delete msgbox;
+        return;
+    }
+    if(PEM_write_bio_PKCS8PrivateKey(EncPriKeyBio,RSAKey,NULL,NULL,0,NULL,NULL) <= 0) {
+        msgbox->setText("Failed To Decrypt Private Key");
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->exec();
+        delete msgbox;
+        BIO_free_all(PriKeyBio);
+        BIO_free_all(EncPriKeyBio);
+        //RSA_free(RSAData);
+        return;
+    }
+    BUF_MEM *EncPriKey;
+    BIO_get_mem_ptr(EncPriKeyBio, &EncPriKey);
+    ui->PrivateKeyInput->setPlainText(QString::fromUtf8(EncPriKey->data,EncPriKey->length));
+    msgbox->setIcon(QMessageBox::Icon::Information);
+    msgbox->setText("Successfully encrypted your private key");
+    msgbox->exec();
+    delete msgbox;
+    BIO_free_all(PriKeyBio);
+    BIO_free_all(EncPriKeyBio);
 }
 

@@ -38,6 +38,10 @@ private slots:
 
     void on_ImportPubCert_clicked();
 
+    void on_PriKeyEncBtn_clicked();
+
+    void on_PriKeyDecBtn_clicked();
+
 private:
     Ui::MainWindow *ui;
 };
