@@ -6,7 +6,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 # Add the executable
-add_executable(SecureText-qt
+add_executable(SecureText-qt WIN32
     mainwindow.ui
     mainwindow.cpp
     mainwindow.h
