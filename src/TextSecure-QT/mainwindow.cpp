@@ -44,7 +44,7 @@ std::string RandChar(const int len) {
 void RandByte(unsigned char* RandFilling,int size) {
     srand( (unsigned) time(NULL) * _getpid()*(rand()%255));
     for (int i=0;i<size;i++) {
-        RandFilling[i] = rand()%255;
+        RandFilling[i] = (unsigned char) rand();
     }
 }
 const EVP_CIPHER * CheckKeyLen(QWidget *parent,QString UserInput) {
@@ -583,21 +583,170 @@ void MainWindow::on_PriKeyDecBtn_clicked()
 
 void MainWindow::on_AREncryptBtn_clicked()
 {
+    QMessageBox msgbox;
+    BIO* PubKeyBio = BIO_new(BIO_s_mem());
+    BIO_write(PubKeyBio,ui->PublicKeyInput->toPlainText().toStdString().c_str(),ui->PublicKeyInput->toPlainText().toUtf8().size());
+    RSA* PubKeyRSA = PEM_read_bio_RSAPublicKey(PubKeyBio,NULL,NULL,NULL);
+    if(PubKeyRSA == NULL) {
+        msgbox.setIcon(QMessageBox::Icon::Critical);
+        msgbox.setText("Invalid RSA Public key was provided");
+        msgbox.exec();
+        BIO_free_all(PubKeyBio);
+        return;
+    }
     unsigned char* RandKey = new unsigned char[32];
     unsigned char* RandIV = new unsigned char[12];
+    QByteArray UserData = ui->AREncInput->toPlainText().toUtf8();
+    EVP_PKEY * PubKey = EVP_PKEY_new();
+    EVP_PKEY_assign_RSA(PubKey, PubKeyRSA);
     RandByte(RandKey,32);
     RandByte(RandIV,12);
-    QByteArray UserData = ui->AREncInput->toPlainText().toUtf8();
+    QByteArray * test = new QByteArray((const char*)RandKey);
+    qDebug() << test->size();
+    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(PubKey,NULL);
+    if(EVP_PKEY_encrypt_init(ctx) <=0) {
+        msgbox.setIcon(QMessageBox::Icon::Critical);
+        msgbox.setText("Init failed");
+        msgbox.exec();
+        EVP_PKEY_free(PubKey);
+        BIO_free_all(PubKeyBio);
+        EVP_PKEY_CTX_free(ctx);
+        return;
+    }
+    if(EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING) <=0) {
+        msgbox.setIcon(QMessageBox::Icon::Critical);
+        msgbox.setText("Padding Mode Failed");
+        msgbox.exec();
+        EVP_PKEY_free(PubKey);
+        BIO_free_all(PubKeyBio);
+        EVP_PKEY_CTX_free(ctx);
+        return;
+    }
+    size_t OutputSize;
+    EVP_PKEY_encrypt(ctx, NULL, &OutputSize, RandKey,32);
+    unsigned char * CipherKey = new unsigned char[OutputSize];
+    if(EVP_PKEY_encrypt(ctx,CipherKey,&OutputSize, RandKey,32) <=0) {
+        msgbox.setIcon(QMessageBox::Icon::Critical);
+        msgbox.setText("Encryption Mode Failed");
+        msgbox.exec();
+        EVP_PKEY_free(PubKey);
+        EVP_PKEY_CTX_free(ctx);
+        BIO_free_all(PubKeyBio);
+        delete[] CipherKey;
+        return;
+    }
+    EVP_CIPHER_CTX * aesctx = EVP_CIPHER_CTX_new();
+    EVP_EncryptInit_ex(aesctx, EVP_aes_256_gcm(), NULL, RandKey, RandIV);
+    unsigned char* CipherTxt = new unsigned char[UserData.size()+16];
+    int CipherSize;
+    EVP_EncryptUpdate(aesctx, CipherTxt, &CipherSize, (unsigned char*)ui->AREncInput->toPlainText().toStdString().c_str(), UserData.size());
+    EVP_EncryptFinal_ex(aesctx, CipherTxt, &CipherSize);
+    EVP_CIPHER_CTX_ctrl(aesctx,EVP_CTRL_AEAD_GET_TAG, 16, &CipherTxt[UserData.size()]);
+    EVP_CIPHER_CTX_free(aesctx);
+    EVP_PKEY_free(PubKey);
+    BIO_free_all(PubKeyBio);
+    EVP_PKEY_CTX_free(ctx);
+    QByteArray ResultData;
+    //ResultData.append(RandKey);
+    ResultData.append((const char*)CipherKey,OutputSize);
+    ResultData.append((const char*)RandIV,12);
+    ResultData.append((const char*)CipherTxt,UserData.size()+16);
+    ui->AREncOutput->setPlainText(QString::fromUtf8(ResultData.toBase64()));
+    ui->AREncInput->setPlainText("");
     delete[] RandKey;
+    delete[] CipherTxt;
+    delete[] CipherKey;
     delete[] RandIV;
 }
 
 
 void MainWindow::on_ARDecryptBtn_clicked()
 {
+    QString MsgTampDisPrefix = "Message is original: ";
+    QMessageBox msgbox;
     QByteArray MainData = QByteArray::fromBase64(ui->ARDecInput->toPlainText().toUtf8());
-    QByteArray RSAEncKey = MainData.sliced(0,222); // Replace 222 it with RSA Key Size
-    //QByteArray IV = MainData.sliced(); //
+    BIO* PriKeyBio = BIO_new(BIO_s_mem());
+    BIO_write(PriKeyBio,ui->PrivateKeyInput->toPlainText().toStdString().c_str(),ui->PrivateKeyInput->toPlainText().toUtf8().size());
+    RSA* PriKeyRSA = PEM_read_bio_RSAPrivateKey(PriKeyBio,NULL,NULL,const_cast<char*>(""));
+    if(PriKeyRSA == NULL) {
+        msgbox.setIcon(QMessageBox::Icon::Critical);
+        msgbox.setText("Invalid RSA Private key was provided");
+        msgbox.exec();
+        BIO_free_all(PriKeyBio);
+        return;
+    }
+    if(MainData.size() < RSA_size(PriKeyRSA)+28) {
+        msgbox.setIcon(QMessageBox::Icon::Critical);
+        msgbox.setText("Invalid input has been supplied");
+        msgbox.exec();
+        BIO_free_all(PriKeyBio);
+        return;
+    }
+    EVP_PKEY * PriKey = EVP_PKEY_new();
+    EVP_PKEY_assign_RSA(PriKey, PriKeyRSA);
+    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(PriKey,NULL);
+        if(EVP_PKEY_decrypt_init(ctx) <=0) {
+            msgbox.setIcon(QMessageBox::Icon::Critical);
+            msgbox.setText("Init failed");
+            msgbox.exec();
+            EVP_PKEY_free(PriKey);
+            EVP_PKEY_CTX_free(ctx);
+            BIO_free_all(PriKeyBio);
+            return;
+        }
+        if(EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING) <=0) {
+            msgbox.setIcon(QMessageBox::Icon::Critical);
+            msgbox.setText("Padding Mode Failed");
+            msgbox.exec();
+            EVP_PKEY_free(PriKey);
+            EVP_PKEY_CTX_free(ctx);
+            BIO_free_all(PriKeyBio);
+            return;
+        }
+        size_t OutSize = RSA_size(PriKeyRSA);
+        unsigned char* AESKey = new unsigned char[OutSize];
+        QByteArray EncryptedAESKey = MainData.sliced(0,OutSize);
+        if(EVP_PKEY_decrypt(ctx,AESKey,&OutSize, (const unsigned char*)EncryptedAESKey.constData(),EncryptedAESKey.size()) <=0) {
+            msgbox.setIcon(QMessageBox::Icon::Critical);
+            msgbox.setText("Decryption Mode Failed");
+            msgbox.exec();
+            EVP_PKEY_free(PriKey);
+            EVP_PKEY_CTX_free(ctx);
+            BIO_free_all(PriKeyBio);
+            delete[] AESKey;
+            return;
+        }
+        QByteArray IV = MainData.sliced(RSA_size(PriKeyRSA),12);
+        QByteArray Data = MainData.sliced(RSA_size(PriKeyRSA)+12,MainData.size()-RSA_size(PriKeyRSA)-12-16);
+        QByteArray Tag = MainData.sliced(RSA_size(PriKeyRSA)+12+Data.length(),16);
+        EVP_CIPHER_CTX *aesctx = EVP_CIPHER_CTX_new();
+        EVP_DecryptInit_ex(aesctx, EVP_aes_256_gcm(), NULL, AESKey, reinterpret_cast<const unsigned char*>(IV.data()));
+        unsigned char* PlainTxt = new unsigned char[Data.length()];
+        int OutputLen;
+        EVP_DecryptUpdate(aesctx, PlainTxt, &OutputLen, reinterpret_cast<const unsigned char*>(Data.data()), Data.length());
+        EVP_CIPHER_CTX_ctrl(aesctx, EVP_CTRL_AEAD_SET_TAG, 16, (void*)Tag.data());
+        switch(EVP_DecryptFinal_ex(aesctx, PlainTxt, &OutputLen)) {
+            case 1:
+                // Decryption Correct
+                ui->ARMessageStatus->setText(MsgTampDisPrefix+"Yes");
+                break;
+            case 0:
+                // Decryption Bad
+                ui->ARMessageStatus->setText(MsgTampDisPrefix+"No");
+                break;
+            default:
+                // Bad Result
+                ui->ARMessageStatus->setText(MsgTampDisPrefix+"Unknown");
+                break;
+        }
+        ui->ARDecOutput->setPlainText(QString::fromUtf8(reinterpret_cast<char*>(PlainTxt),Data.length()));
+        ui->ARDecInput->setPlainText("");
+        EVP_PKEY_free(PriKey);
+        EVP_PKEY_CTX_free(ctx);
+        EVP_CIPHER_CTX_free(aesctx);
+        BIO_free_all(PriKeyBio);
+        delete[] AESKey;
+        delete[] PlainTxt;
 }
 
 

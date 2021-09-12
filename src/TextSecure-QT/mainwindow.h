@@ -42,6 +42,14 @@ private slots:
 
     void on_PriKeyDecBtn_clicked();
 
+    void on_AREncryptBtn_clicked();
+
+    void on_AREncryptClear_clicked();
+
+    void on_ARDecryptBtn_clicked();
+
+    void on_ARDecryptClear_clicked();
+
 private:
     Ui::MainWindow *ui;
 };
