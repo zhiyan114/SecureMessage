@@ -42,7 +42,7 @@ std::string RandChar(const int len) {
 
 }
 void RandByte(unsigned char* RandFilling,int size) {
-    srand( (unsigned) time(NULL) * _getpid());
+    srand( (unsigned) time(NULL) * _getpid()*(rand()%255));
     for (int i=0;i<size;i++) {
         RandFilling[i] = rand()%255;
     }
@@ -578,5 +578,53 @@ void MainWindow::on_PriKeyDecBtn_clicked()
     delete msgbox;
     BIO_free_all(PriKeyBio);
     BIO_free_all(EncPriKeyBio);
+}
+
+
+void MainWindow::on_AREncryptBtn_clicked()
+{
+    unsigned char* RandKey = new unsigned char[32];
+    unsigned char* RandIV = new unsigned char[12];
+    RandByte(RandKey,32);
+    RandByte(RandIV,12);
+    QByteArray UserData = ui->AREncInput->toPlainText().toUtf8();
+    delete[] RandKey;
+    delete[] RandIV;
+}
+
+
+void MainWindow::on_ARDecryptBtn_clicked()
+{
+    QByteArray MainData = QByteArray::fromBase64(ui->ARDecInput->toPlainText().toUtf8());
+    QByteArray RSAEncKey = MainData.sliced(0,222); // Replace 222 it with RSA Key Size
+    //QByteArray IV = MainData.sliced(); //
+}
+
+
+void MainWindow::on_AREncryptClear_clicked()
+{
+    switch(QMessageBox::question(this,"Clear Encryption Message","Are you sure that you want to clear your encrypted message?",QMessageBox::Yes | QMessageBox::No)) {
+       case QMessageBox::Yes:
+        // Yes Do it
+        ui->AREncOutput->setPlainText("");
+        break;
+       default:
+        // Dont do it
+        break;
+    }
+}
+
+
+void MainWindow::on_ARDecryptClear_clicked()
+{
+    switch(QMessageBox::question(this,"Clear Decryption Message","Are you sure that you want to clear your decrypted message?",QMessageBox::Yes | QMessageBox::No)) {
+       case QMessageBox::Yes:
+        // Yes Do it
+        ui->ARDecOutput->setPlainText("");
+        break;
+       default:
+        // Dont do it
+        break;
+    }
 }
 
