@@ -602,7 +602,6 @@ void MainWindow::on_AREncryptBtn_clicked()
     RandByte(RandKey,32);
     RandByte(RandIV,12);
     QByteArray * test = new QByteArray((const char*)RandKey);
-    qDebug() << test->size();
     EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(PubKey,NULL);
     if(EVP_PKEY_encrypt_init(ctx) <=0) {
         msgbox.setIcon(QMessageBox::Icon::Critical);
