@@ -490,6 +490,7 @@ void MainWindow::on_ImportPubCert_clicked()
 
     BIO_get_mem_ptr(PubKeyBio, &PubKey);
     ui->PublicKeyInput->setPlainText(QString::fromUtf8(PubKey->data,PubKey->length));
+    ui->PublicCertInput->setPlainText("");
     BIO_free_all(CertKeyBio);
     BIO_free_all(PubKeyBio);
     X509_free(PubCert);
