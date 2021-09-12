@@ -594,14 +594,12 @@ void MainWindow::on_AREncryptBtn_clicked()
         BIO_free_all(PubKeyBio);
         return;
     }
-    unsigned char* RandKey = new unsigned char[32];
+    unsigned char* RandKey;
     unsigned char* RandIV = new unsigned char[12];
     QByteArray UserData = ui->AREncInput->toPlainText().toUtf8();
     EVP_PKEY * PubKey = EVP_PKEY_new();
     EVP_PKEY_assign_RSA(PubKey, PubKeyRSA);
-    RandByte(RandKey,32);
     RandByte(RandIV,12);
-    QByteArray * test = new QByteArray((const char*)RandKey);
     EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(PubKey,NULL);
     if(EVP_PKEY_encrypt_init(ctx) <=0) {
         msgbox.setIcon(QMessageBox::Icon::Critical);
@@ -621,10 +619,23 @@ void MainWindow::on_AREncryptBtn_clicked()
         EVP_PKEY_CTX_free(ctx);
         return;
     }
+    const EVP_CIPHER * CipherMode;
+    int keysize = 0;
+    if((RSA_size(PubKeyRSA)/8)-42 < 32) {
+        RandKey = new unsigned char[16];
+        RandByte(RandKey,16);
+        keysize = 16;
+        CipherMode = EVP_aes_128_gcm();
+    } else {
+        RandKey = new unsigned char[32];
+        RandByte(RandKey,32);
+        keysize = 32;
+        CipherMode = EVP_aes_256_gcm();
+    }
     size_t OutputSize;
-    EVP_PKEY_encrypt(ctx, NULL, &OutputSize, RandKey,32);
+    EVP_PKEY_encrypt(ctx, NULL, &OutputSize, RandKey,keysize);
     unsigned char * CipherKey = new unsigned char[OutputSize];
-    if(EVP_PKEY_encrypt(ctx,CipherKey,&OutputSize, RandKey,32) <=0) {
+    if(EVP_PKEY_encrypt(ctx,CipherKey,&OutputSize, RandKey,keysize) <=0) {
         msgbox.setIcon(QMessageBox::Icon::Critical);
         msgbox.setText("Encryption Mode Failed");
         msgbox.exec();
@@ -635,7 +646,7 @@ void MainWindow::on_AREncryptBtn_clicked()
         return;
     }
     EVP_CIPHER_CTX * aesctx = EVP_CIPHER_CTX_new();
-    EVP_EncryptInit_ex(aesctx, EVP_aes_256_gcm(), NULL, RandKey, RandIV);
+    EVP_EncryptInit_ex(aesctx, CipherMode, NULL, RandKey, RandIV);
     unsigned char* CipherTxt = new unsigned char[UserData.size()+16];
     int CipherSize;
     EVP_EncryptUpdate(aesctx, CipherTxt, &CipherSize, (unsigned char*)ui->AREncInput->toPlainText().toStdString().c_str(), UserData.size());
@@ -719,7 +730,13 @@ void MainWindow::on_ARDecryptBtn_clicked()
         QByteArray Data = MainData.sliced(RSA_size(PriKeyRSA)+12,MainData.size()-RSA_size(PriKeyRSA)-12-16);
         QByteArray Tag = MainData.sliced(RSA_size(PriKeyRSA)+12+Data.length(),16);
         EVP_CIPHER_CTX *aesctx = EVP_CIPHER_CTX_new();
-        EVP_DecryptInit_ex(aesctx, EVP_aes_256_gcm(), NULL, AESKey, reinterpret_cast<const unsigned char*>(IV.data()));
+        const EVP_CIPHER * CipherMode;
+        if((RSA_size(PriKeyRSA)/8)-42 < 32) {
+            CipherMode = EVP_aes_128_gcm();
+        } else {
+            CipherMode = EVP_aes_256_gcm();
+        }
+        EVP_DecryptInit_ex(aesctx, CipherMode, NULL, AESKey, reinterpret_cast<const unsigned char*>(IV.data()));
         unsigned char* PlainTxt = new unsigned char[Data.length()];
         int OutputLen;
         EVP_DecryptUpdate(aesctx, PlainTxt, &OutputLen, reinterpret_cast<const unsigned char*>(Data.data()), Data.length());

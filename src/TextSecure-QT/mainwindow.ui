@@ -784,7 +784,7 @@
        </font>
       </property>
       <property name="text">
-       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You may use the software for any purposes and I will not be liable for the outcome. Both AES and RSA mode are available. It is recommended to use AES mode for message encryption then use the RSA as a AES Key encrytion since it has a severe size limit and is not designed for that purpose either way. (In a later release, a combination of both mode will be available so that you do not need to store the AES Key and data seperately).&lt;/p&gt;&lt;p&gt;The AES/RSA is simply a way to encrypt data by using an RSA key. It works by encrypting a random key and then embed it with the data which is encrypted with AES.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You may use the software for any purposes and I will not be liable for the outcome. Both AES and RSA mode are available. It is recommended to use AES mode for message encryption then use the RSA as a AES Key encrytion since it has a severe size limit and is not designed for that purpose either way. (In a later release, a combination of both mode will be available so that you do not need to store the AES Key and data seperately).&lt;/p&gt;&lt;p&gt;The AES/RSA is simply a way to encrypt data by using an RSA key. It works by encrypting a random key and then embed it with the data which is encrypted with AES. If you're using an RSA keysize that are less than 592-bit a 128-bit AES key will be used instead of 256-bit AES key.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="scaledContents">
        <bool>true</bool>
