@@ -7,6 +7,7 @@
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 #include <openssl/x509.h>
+#include <qDebug>
 
 // Legacy function in-case we need it lol
 std::string RandChar(const int len) {
