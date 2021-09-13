@@ -8,6 +8,26 @@
 #include <openssl/pem.h>
 #include <openssl/x509.h>
 
+// Legacy function in-case we need it lol
+std::string RandChar(const int len) {
+
+    std::string tmp_s;
+    static const char alphanum[] =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+
+    srand( (unsigned) time(NULL) * _getpid());
+
+    tmp_s.reserve(len);
+
+    for (int i = 0; i < len; ++i)
+        tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
+
+    return tmp_s;
+
+}
+
 void RandByte(unsigned char* RandFilling,int size) {
     srand( (unsigned) time(NULL) * _getpid()*(rand()%255));
     for (int i=0;i<size;i++) {
@@ -38,7 +58,7 @@ int Encryption::IAES::Encrypt(QByteArray Key, QByteArray Data, QByteArray * Resu
             break;
     }
     EVP_CIPHER_CTX * ctx = EVP_CIPHER_CTX_new();
-    EVP_EncryptInit_ex(ctx, CipherMode, NULL, reinterpret_cast<const unsigned char*>(Data.constData()), IV);
+    EVP_EncryptInit_ex(ctx, CipherMode, NULL, reinterpret_cast<const unsigned char*>(Key.constData()), IV);
     unsigned char* CipherTxt = new unsigned char[Data.size()+16];
     int CipherSize;
     EVP_EncryptUpdate(ctx, CipherTxt, &CipherSize, reinterpret_cast<unsigned char*>(Data.data()), Data.size());
@@ -79,7 +99,7 @@ int Encryption::IAES::Decrypt(QByteArray Key, QByteArray Data, QByteArray * Resu
     }
     QByteArray MainData = Data.sliced(12,Data.size()-28);
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-    EVP_DecryptInit_ex(ctx, CipherMode, NULL, reinterpret_cast<const unsigned char*>(Data.constData()), reinterpret_cast<const unsigned char*>(Data.sliced(0,12).data()));
+    EVP_DecryptInit_ex(ctx, CipherMode, NULL, reinterpret_cast<const unsigned char*>(Key.constData()), reinterpret_cast<const unsigned char*>(Data.sliced(0,12).data()));
     unsigned char* PlainTxt = new unsigned char[MainData.length()];
     int OutputLen;
     EVP_DecryptUpdate(ctx, PlainTxt, &OutputLen, reinterpret_cast<const unsigned char*>(MainData.data()), MainData.length());

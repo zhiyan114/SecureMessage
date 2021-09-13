@@ -1,11 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include <QMessageBox>
-#include <ctime>
-#include <stdio.h>
-#include <process.h>
-#include <openssl/bio.h>
-#include <openssl/evp.h>
+#include "EncryptionHandler.h"
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 #include <openssl/x509.h>
@@ -23,49 +19,6 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-std::string RandChar(const int len) {
-
-    std::string tmp_s;
-    static const char alphanum[] =
-        "0123456789"
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz";
-
-    srand( (unsigned) time(NULL) * _getpid());
-
-    tmp_s.reserve(len);
-
-    for (int i = 0; i < len; ++i)
-        tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
-
-    return tmp_s;
-
-}
-void RandByte(unsigned char* RandFilling,int size) {
-    srand( (unsigned) time(NULL) * _getpid()*(rand()%255));
-    for (int i=0;i<size;i++) {
-        RandFilling[i] = (unsigned char) rand();
-    }
-}
-const EVP_CIPHER * CheckKeyLen(QWidget *parent,QString UserInput) {
-    switch(UserInput.toUtf8().size()) {
-        case 16:
-             return EVP_aes_128_gcm();
-        case 24:
-            return EVP_aes_192_gcm();
-        case 32:
-            return EVP_aes_256_gcm();
-        default:
-            QMessageBox * msg = new QMessageBox(parent);
-            msg->setWindowTitle("Invalid Key Length");
-            msg->setIcon(QMessageBox::Icon::Critical);
-            msg->setText("Invalid Key Length, must be 16, 24, or 32 characters long. Your Key's byte size: "+QString::fromStdString(std::to_string(UserInput.toUtf8().size())));
-            msg->exec();
-            delete msg;
-            msg = nullptr;
-           return NULL;
-    }
-}
 bool is_number(const std::string& s)
 {
     std::string::const_iterator it = s.begin();
@@ -74,80 +27,65 @@ bool is_number(const std::string& s)
 }
 void MainWindow::on_EncryptBtn_clicked()
 {
-    unsigned char* IV = new unsigned char[12];
-    RandByte(IV,12);
-    const EVP_CIPHER * CipherMode = CheckKeyLen(this,ui->KeyInput->text());
-    if(CipherMode == NULL) {
-        return;
+    QMessageBox * msgbox = new QMessageBox(this);
+    msgbox->setWindowTitle("AES Encryption");
+    QByteArray * Result = new QByteArray();
+    switch(Encryption::IAES::Encrypt(ui->KeyInput->text().toUtf8(),ui->EncInput->toPlainText().toUtf8(),Result)) {
+    case 1:
+        ui->EncOutput->setPlainText(Result->toBase64());
+        ui->EncInput->setPlainText("");
+        break;
+    case 0:
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->setText("Your AES key must be a 16, 24, or 32 bytes long. Current size: "+QString::number(ui->KeyInput->text().toUtf8().size()));
+        msgbox->exec();
+        break;
+    default:
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->setText("Something else went wrong");
+        msgbox->exec();
+        break;
     }
-    EVP_CIPHER_CTX * ctx = EVP_CIPHER_CTX_new();
-    EVP_EncryptInit_ex(ctx, CipherMode, NULL, reinterpret_cast<const unsigned char*>(ui->KeyInput->text().constData()), IV);
-    unsigned char* CipherTxt = new unsigned char[strlen(ui->EncInput->toPlainText().toStdString().c_str())+16];
-    int CipherSize;
-    EVP_EncryptUpdate(ctx, CipherTxt, &CipherSize, (unsigned char*)ui->EncInput->toPlainText().toStdString().c_str(), strlen(ui->EncInput->toPlainText().toStdString().c_str()));
-    EVP_EncryptFinal_ex(ctx, CipherTxt, &CipherSize);
-    EVP_CIPHER_CTX_ctrl(ctx,EVP_CTRL_AEAD_GET_TAG, 16, &CipherTxt[strlen(ui->EncInput->toPlainText().toStdString().c_str())]);
-    EVP_CIPHER_CTX_free(ctx);
-    QByteArray * Data = new QByteArray((const char*)IV,12);
-    Data->append((const char*)CipherTxt,strlen(ui->EncInput->toPlainText().toStdString().c_str())+16);
-    ui->EncOutput->setPlainText(Data->toBase64());
-    //ui->EncOutput->setText((const char*)CipherTxt);
-    ui->EncInput->setPlainText("");
-    delete Data;
-    delete[] CipherTxt;
+    delete Result;
+    delete msgbox;
 }
 
 
 void MainWindow::on_DecryptBtn_clicked()
 {
-    QString MsgTampDisPrefix = "Message is original: ";
-    const EVP_CIPHER * CipherMode = CheckKeyLen(this,ui->KeyInput->text());
-    if(CipherMode == NULL) {
-        return;
+    QMessageBox * msgbox = new QMessageBox(this);
+    msgbox->setWindowTitle("AES Encryption");
+    QByteArray * Result = new QByteArray();
+    switch(Encryption::IAES::Decrypt(ui->KeyInput->text().toUtf8(),QByteArray::fromBase64(ui->DecInput->toPlainText().toUtf8()),Result)) {
+    case 1:
+        ui->DecOutput->setPlainText(QString::fromUtf8(*Result));
+        ui->MessageStatus->setText("Message is original: Yes");
+        ui->DecInput->setPlainText("");
+        break;
+    case 0:
+        ui->DecOutput->setPlainText(QString::fromUtf8(*Result));
+        ui->MessageStatus->setText("Message is original: No");
+        ui->DecInput->setPlainText("");
+        break;
+    case -1:
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->setText("Your AES key must be a 16, 24, or 32 bytes long. Current size: "+QString::number(ui->KeyInput->text().toUtf8().size()));
+        msgbox->exec();
+        break;
+   case -2:
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->setText("Invalid input has been supplied");
+        msgbox->exec();
+        break;
+   default:
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->setText("Something else went wrong");
+        msgbox->exec();
+        break;
+
     }
-    QByteArray DataByte = QByteArray::fromBase64(ui->DecInput->toPlainText().toUtf8());
-    if(DataByte.size() < 28) {
-        QMessageBox * msg = new QMessageBox();
-        msg->setWindowTitle("Invalid Message");
-        msg->setText("Invalid input has been supplied");
-        msg->setIcon(QMessageBox::Critical);
-        msg->exec();
-        delete msg;
-        return;
-    }
-    QByteArray IV = DataByte.sliced(0,12);
-    QByteArray MainData = DataByte.sliced(12,DataByte.size()-28);
-    QByteArray MainTag = DataByte.sliced(DataByte.size()-16,16);
-    /*
-    qDebug() << strlen(IV);
-    qDebug() << strlen(MainData);
-    qDebug() << strlen(MainTag);
-    */
-    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-    EVP_DecryptInit_ex(ctx, CipherMode, NULL, reinterpret_cast<const unsigned char*>(ui->KeyInput->text().constData()), reinterpret_cast<const unsigned char*>(IV.data()));
-    unsigned char* PlainTxt = new unsigned char[MainData.length()];
-    int OutputLen;
-    EVP_DecryptUpdate(ctx, PlainTxt, &OutputLen, reinterpret_cast<const unsigned char*>(MainData.data()), MainData.length());
-    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, (void*)MainTag.data());
-    switch(EVP_DecryptFinal_ex(ctx, PlainTxt, &OutputLen)) {
-        case 1:
-            // Decryption Correct
-            ui->MessageStatus->setText(MsgTampDisPrefix+"Yes");
-            break;
-        case 0:
-            // Decryption Bad
-            ui->MessageStatus->setText(MsgTampDisPrefix+"No");
-            break;
-        default:
-            // Bad Result
-            ui->MessageStatus->setText(MsgTampDisPrefix+"Unknown");
-            break;
-    }
-      EVP_CIPHER_CTX_free(ctx);
-     //qDebug() << QString::fromUtf8(PlainTxt).size();
-    ui->DecOutput->setPlainText(QString::fromUtf8(reinterpret_cast<char*>(PlainTxt),MainData.length()));
-    ui->DecInput->setPlainText("");
-    delete[] PlainTxt;
+    delete Result;
+    delete msgbox;
 }
 
 
@@ -603,7 +541,7 @@ void MainWindow::on_AREncryptBtn_clicked()
     QByteArray UserData = ui->AREncInput->toPlainText().toUtf8();
     EVP_PKEY * PubKey = EVP_PKEY_new();
     EVP_PKEY_assign_RSA(PubKey, PubKeyRSA);
-    RandByte(RandIV,12);
+    //RandByte(RandIV,12);
     EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(PubKey,NULL);
     if(EVP_PKEY_encrypt_init(ctx) <=0) {
         msgbox.setIcon(QMessageBox::Icon::Critical);
@@ -627,12 +565,12 @@ void MainWindow::on_AREncryptBtn_clicked()
     int keysize = 0;
     if((RSA_size(PubKeyRSA)/8)-42 < 32) {
         RandKey = new unsigned char[16];
-        RandByte(RandKey,16);
+        //RandByte(RandKey,16);
         keysize = 16;
         CipherMode = EVP_aes_128_gcm();
     } else {
         RandKey = new unsigned char[32];
-        RandByte(RandKey,32);
+        //RandByte(RandKey,32);
         keysize = 32;
         CipherMode = EVP_aes_256_gcm();
     }
