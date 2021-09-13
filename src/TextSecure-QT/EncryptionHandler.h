@@ -2,13 +2,13 @@
 #define ENCRYPTIONHANDLER_H
 #include <QByteArray>
 namespace Encryption {
-namespace AES {
-int Encrypt(QByteArray Key, QByteArray Data);
-int Decrypt(QByteArray Key, QByteArray Data);
+namespace IAES {
+int Encrypt(QByteArray Key, QByteArray Data, QByteArray * Result);
+int Decrypt(QByteArray Key, QByteArray Data, QByteArray * Result);
 }
-namespace RSA {
-int Encrypt(QByteArray PubKey, QByteArray Data);
-int Decrypt(QByteArray PriKey, QByteArray Data);
+namespace IRSA {
+int Encrypt(QByteArray PubKey, QByteArray Data, QByteArray * Result);
+int Decrypt(QByteArray PriKey, QByteArray Data, QByteArray * Result);
 }
 }
 #endif // ENCRYPTIONHANDLER_H
