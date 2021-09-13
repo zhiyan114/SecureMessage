@@ -534,6 +534,7 @@ void MainWindow::on_PriKeyEncBtn_clicked()
     BUF_MEM *EncPriKey;
     BIO_get_mem_ptr(EncPriKeyBio, &EncPriKey);
     ui->PrivateKeyInput->setPlainText(QString::fromUtf8(EncPriKey->data,EncPriKey->length));
+    ui->PriKeyPassInput->setText("");
     msgbox->setIcon(QMessageBox::Icon::Information);
     msgbox->setText("Successfully encrypted your private key");
     msgbox->exec();
@@ -574,6 +575,7 @@ void MainWindow::on_PriKeyDecBtn_clicked()
     BUF_MEM *EncPriKey;
     BIO_get_mem_ptr(EncPriKeyBio, &EncPriKey);
     ui->PrivateKeyInput->setPlainText(QString::fromUtf8(EncPriKey->data,EncPriKey->length));
+    ui->PriKeyPassInput->setText("");
     msgbox->setIcon(QMessageBox::Icon::Information);
     msgbox->setText("Successfully decrypted your private key");
     msgbox->exec();
