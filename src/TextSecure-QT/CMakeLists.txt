@@ -11,6 +11,8 @@ add_executable(SecureText-qt WIN32
     mainwindow.cpp
     mainwindow.h
     main.cpp
+    EncryptionHandler.h
+    EncryptionHandler.cpp
 )
 # Link the libs
 target_link_libraries(SecureText-qt Qt6::Widgets OpenSSL::Crypto)
