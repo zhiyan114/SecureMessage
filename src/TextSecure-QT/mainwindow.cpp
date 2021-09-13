@@ -171,6 +171,7 @@ void MainWindow::on_DecClear_clicked()
        case QMessageBox::Yes:
         // Yes Do it
         ui->DecOutput->setPlainText("");
+        ui->MessageStatus->setText("Message is original: NULL");
         break;
        default:
         // Dont do it
@@ -787,6 +788,7 @@ void MainWindow::on_ARDecryptClear_clicked()
        case QMessageBox::Yes:
         // Yes Do it
         ui->ARDecOutput->setPlainText("");
+        ui->ARMessageStatus->setText("Message is original: NULL");
         break;
        default:
         // Dont do it
