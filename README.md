@@ -5,4 +5,4 @@ A software that is used to encrypt your communication message. It's small and si
 - [X] Recovery Public key using a private key
 - [X] RSA key encryption
 - [X] Convert RSA certificate to RSA public key
-- [ ] Code Optimization (Current source code is too messy)
+- [X] Code Optimization (Current source code is too messy)

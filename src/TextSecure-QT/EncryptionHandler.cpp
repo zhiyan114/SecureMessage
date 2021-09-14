@@ -7,7 +7,6 @@
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 #include <openssl/x509.h>
-#include <qDebug>
 
 // Legacy function in-case we need it lol
 std::string RandChar(const int len) {
@@ -216,4 +215,28 @@ int Encryption::IRSA::Decrypt(QByteArray IPriKey, QByteArray Data, QByteArray * 
     BIO_free_all(PriKeyBio);
     delete[] PlainText;
     return 1;
+}
+/*
+ * Return Values:
+ * Dynamic - RSA Key Size
+ * -1 - Invalid RSA Key
+ */
+int Encryption::IRSA::KeySize(QByteArray RSAKey,bool isPublic) {
+    BIO* RSAKeyBio = BIO_new(BIO_s_mem());
+    BIO_write(RSAKeyBio,RSAKey.constData(),RSAKey.size());
+    RSA* RSAKeyRSA;
+    if(isPublic) {
+        RSAKeyRSA = PEM_read_bio_RSAPublicKey(RSAKeyBio,NULL,NULL,NULL);
+    } else {
+        RSAKeyRSA = PEM_read_bio_RSAPrivateKey(RSAKeyBio,NULL,NULL,const_cast<char*>(""));
+    }
+    if(RSAKeyRSA == NULL) {
+        // Not a private key? Then it an invalid key
+        BIO_free_all(RSAKeyBio);
+        return -1;
+    }
+    BIO_free_all(RSAKeyBio);
+    int RSAKeySize = RSA_size(RSAKeyRSA);
+    RSA_free(RSAKeyRSA);
+    return RSAKeySize;
 }
