@@ -97,13 +97,13 @@ int Encryption::IAES::Decrypt(QByteArray Key, QByteArray Data, QByteArray * Resu
     if(Data.size() < 28) {
         return -2;
     }
-    QByteArray MainData = Data.sliced(12,Data.size()-28);
+    QByteArray MainData = Data.mid(12,Data.size()-28);
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-    EVP_DecryptInit_ex(ctx, CipherMode, NULL, reinterpret_cast<const unsigned char*>(Key.constData()), reinterpret_cast<const unsigned char*>(Data.sliced(0,12).data()));
+    EVP_DecryptInit_ex(ctx, CipherMode, NULL, reinterpret_cast<const unsigned char*>(Key.constData()), reinterpret_cast<const unsigned char*>(Data.mid(0,12).data()));
     unsigned char* PlainTxt = new unsigned char[MainData.length()];
     int OutputLen;
     EVP_DecryptUpdate(ctx, PlainTxt, &OutputLen, reinterpret_cast<const unsigned char*>(MainData.data()), MainData.length());
-    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, (void*)Data.sliced(Data.size()-16,16).data());
+    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, (void*)Data.mid(Data.size()-16,16).data());
     int ResultValue = EVP_DecryptFinal_ex(ctx, PlainTxt, &OutputLen);
     EVP_CIPHER_CTX_free(ctx);
     Result->append(reinterpret_cast<char*>(PlainTxt),MainData.length());

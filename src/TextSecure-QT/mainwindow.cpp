@@ -554,7 +554,7 @@ void MainWindow::on_ARDecryptBtn_clicked()
         delete msgbox;
         return;
     }
-    switch(Encryption::IRSA::Decrypt(ui->PrivateKeyInput->toPlainText().toUtf8(),MainData.sliced(0,RSAKeyLen),DecryptedAESKey)) {
+    switch(Encryption::IRSA::Decrypt(ui->PrivateKeyInput->toPlainText().toUtf8(),MainData.mid(0,RSAKeyLen),DecryptedAESKey)) {
     case 1:
         break;
     case 0:
@@ -581,7 +581,7 @@ void MainWindow::on_ARDecryptBtn_clicked()
     }
 
     QByteArray * DecData = new QByteArray();
-    switch(Encryption::IAES::Decrypt(*DecryptedAESKey,MainData.sliced(RSAKeyLen,MainData.size()-RSAKeyLen),DecData)) {
+    switch(Encryption::IAES::Decrypt(*DecryptedAESKey,MainData.mid(RSAKeyLen,MainData.size()-RSAKeyLen),DecData)) {
     case 1:
         ui->ARMessageStatus->setText("Message is original: Yes");
         ui->ARDecOutput->setPlainText(*DecData);
