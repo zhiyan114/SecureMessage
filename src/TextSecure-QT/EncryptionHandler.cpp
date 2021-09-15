@@ -1,13 +1,27 @@
 #include "EncryptionHandler.h"
 #include <ctime>
 #include <stdio.h>
+#ifdef _WIN64
+// x64 bit Windows library
 #include <process.h>
+#elif __linux__ || __unix__
+// x64 bit Linux library
+#include <unistd.h>
+#endif
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 #include <openssl/x509.h>
 
+
+#ifdef _WIN64
+// x64 bit Windows library
+int Pid = _getpid();
+#elif __linux__ || __unix__
+// x64 bit Linux library
+int Pid = getpid();
+#endif
 // Legacy function in-case we need it lol
 std::string RandChar(const int len) {
 
@@ -17,7 +31,7 @@ std::string RandChar(const int len) {
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz";
 
-    srand( (unsigned) time(NULL) * _getpid());
+    srand( (unsigned) time(NULL) * Pid);
 
     tmp_s.reserve(len);
 
@@ -29,7 +43,7 @@ std::string RandChar(const int len) {
 }
 
 void RandByte(unsigned char* RandFilling,int size) {
-    srand( (unsigned) time(NULL) * _getpid()*(rand()%255));
+    srand( (unsigned) time(NULL) * Pid*(rand()%255));
     for (int i=0;i<size;i++) {
         RandFilling[i] = (unsigned char) rand();
     }

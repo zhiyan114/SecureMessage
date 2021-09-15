@@ -6,7 +6,13 @@
 #include <openssl/pem.h>
 #include <openssl/x509.h>
 #include <stdio.h>
+#ifdef _WIN64
+// x64 bit Windows library
 #include <process.h>
+#elif __linux__ || __unix__
+// x64 bit Linux library
+#include <unistd.h>
+#endif
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -477,7 +483,13 @@ void MainWindow::on_AREncryptBtn_clicked()
         RandKey = new unsigned char[32];
         KeySize = 32;
     }
-    srand( (unsigned) time(NULL) * _getpid()*(rand()%255));
+#ifdef _WIN64
+// x64 bit Windows library
+srand( (unsigned) time(NULL) * _getpid()*(rand()%255));
+#elif __linux__ || __unix__
+// x64 bit Linux library
+srand( (unsigned) time(NULL) * getpid()*(rand()%255));
+#endif
     for (int i=0;i<KeySize;i++) {
         RandKey[i] = (unsigned char) rand();
     }
