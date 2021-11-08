@@ -12,12 +12,15 @@ pool:
 
 steps:
 - task: CMake@1
+  displayName: 'Init CMake Files for build'
   inputs:
     workingDirectory: 'build'
-- script: cmake ..
-  displayName: Create CMake file
-- script: make #CMake --build . --config Debug
-  displayName: CMake build file
+    cmakeArgs: '..'
+- task: CMake@1
+  displayName: "Build the src"
+  inputs:
+    workingDirectory: "build"
+    cmakeArgs: "make"
 
 #- script: |
 #    echo Add other tasks to build, test, and deploy your project.
