@@ -11,6 +11,9 @@ pool:
   vmImage: ubuntu-latest
 
 steps:
+- task: CMake@1
+  inputs:
+    workingDirectory: 'build'
 - script: cmake ..
   displayName: Create CMake file
 - script: make #CMake --build . --config Debug
