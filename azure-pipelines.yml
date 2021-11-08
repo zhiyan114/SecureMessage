@@ -1,4 +1,7 @@
 # Starter pipeline
+- task: CMake@1
+  inputs:
+    cmakeArgs: 
 # Start with a minimal pipeline that you can customize to build and deploy your code.
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
@@ -8,13 +11,11 @@ trigger:
 
 pool:
   vmImage: ubuntu-latest
-  demands:
-    - cmake
 
 steps:
 - script: cmake ..
   displayName: Create CMake file
-- script: CMake --build . --config Debug
+- script: make #CMake --build . --config Debug
   displayName: CMake build file
 
 #- script: |
