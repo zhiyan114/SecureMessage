@@ -23,7 +23,7 @@ steps:
   displayName: "Build the src"
   inputs:
     workingDirectory: "build"
-    cmakeArgs: "make"
+    cmakeArgs: "--build ."
 
 #- script: |
 #    echo Add other tasks to build, test, and deploy your project.
