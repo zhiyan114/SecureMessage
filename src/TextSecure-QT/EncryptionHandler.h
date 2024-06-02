@@ -16,4 +16,6 @@ int KeySize(QByteArray RSAKey, bool isPublic);
 namespace Utils {
 int SHA256(QByteArray * data);
 }
+
+void RandByte(unsigned char* byteArr,int size);
 #endif // ENCRYPTIONHANDLER_H

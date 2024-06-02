@@ -4,9 +4,11 @@
 #ifdef _WIN64
 // x64 bit Windows library
 #include <process.h>
+#include <windows.h>
 #elif __linux__ || __unix__
 // x64 bit Linux library
 #include <unistd.h>
+#include <fstream>
 #endif
 #include <openssl/bio.h>
 #include <openssl/evp.h>
@@ -15,39 +17,18 @@
 #include <openssl/x509.h>
 #include <openssl/sha.h>
 
-
+void RandByte(unsigned char* byteArr,int size) {
 #ifdef _WIN64
-// x64 bit Windows library
-int Pid = _getpid();
-#elif __linux__ || __unix__
-// x64 bit Linux library
-int Pid = getpid();
+    BCRYPT_ALG_HANDLE BCHandle;
+    BCryptOpenAlgorithmProvider(&BCHandle, BCRYPT_RNG_ALGORITHM, NULL, 0);
+    BCryptGenRandom(&BCHandle, byteArr, size, 0);
+#elif __linux || __unix__
+    // /dev/urandom grabber lol
+    std::ifstream urandom("/dev/urandom", std::ios::binary);
+    urandom.read(byteArr, size);
+#else
+    #error Unsupported Target OS (RandByte Method)
 #endif
-// Legacy function in-case we need it lol
-std::string RandChar(const int len) {
-
-    std::string tmp_s;
-    static const char alphanum[] =
-        "0123456789"
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz";
-
-    srand( (unsigned) time(NULL) * Pid);
-
-    tmp_s.reserve(len);
-
-    for (int i = 0; i < len; ++i)
-        tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
-
-    return tmp_s;
-
-}
-
-void RandByte(unsigned char* RandFilling,int size) {
-    srand( (unsigned) time(NULL) * Pid*(rand()%255));
-    for (int i=0;i<size;i++) {
-        RandFilling[i] = (unsigned char) rand();
-    }
 }
 /*
  * Return Values:
