@@ -29,3 +29,7 @@ endif()
 
 # Link the libs
 target_link_libraries(SecureText-qt Qt6::Widgets OpenSSL::Crypto)
+
+if(WIN32)
+    target_link_libraries(SecureText-qt bcrypt.lib)
+endif(WIN32)

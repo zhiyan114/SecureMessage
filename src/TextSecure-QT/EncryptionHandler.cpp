@@ -1,10 +1,11 @@
 #include "EncryptionHandler.h"
-#include <ctime>
+#include<QDebug>
 #include <stdio.h>
 #ifdef _WIN64
 // x64 bit Windows library
 #include <process.h>
 #include <windows.h>
+#include <bcrypt.h>
 #elif __linux__ || __unix__
 // x64 bit Linux library
 #include <unistd.h>
@@ -19,9 +20,7 @@
 
 void RandByte(unsigned char* byteArr,int size) {
 #ifdef _WIN64
-    BCRYPT_ALG_HANDLE BCHandle;
-    BCryptOpenAlgorithmProvider(&BCHandle, BCRYPT_RNG_ALGORITHM, NULL, 0);
-    BCryptGenRandom(&BCHandle, byteArr, size, 0);
+    BCryptGenRandom(BCRYPT_RNG_ALG_HANDLE, byteArr, size, 0);
 #elif __linux || __unix__
     // /dev/urandom grabber lol
     std::ifstream urandom("/dev/urandom", std::ios::binary);
@@ -36,7 +35,7 @@ void RandByte(unsigned char* byteArr,int size) {
  * 0 - Invalid AES Key size
 */
 int Encryption::IAES::Encrypt(QByteArray Key, QByteArray Data, QByteArray * Result) {
-    unsigned char* IV = new unsigned char[12];
+    unsigned char IV[12];
     RandByte(IV,12);
     const EVP_CIPHER * CipherMode;
     switch(Key.size()) {
@@ -64,7 +63,6 @@ int Encryption::IAES::Encrypt(QByteArray Key, QByteArray Data, QByteArray * Resu
     Result->append((const char*)IV,12);
     Result->append((const char*)CipherTxt,Data.size()+16);
     delete[] CipherTxt;
-    delete[] IV;
     return 1;
 }
 /*
