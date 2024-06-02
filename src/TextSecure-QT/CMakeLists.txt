@@ -1,5 +1,5 @@
 # Find important libs
-find_package(Qt5 COMPONENTS Widgets REQUIRED)
+find_package(Qt6 COMPONENTS Widgets REQUIRED)
 find_package(OpenSSL REQUIRED)
 # Handle QT Internals
 set(CMAKE_AUTOMOC ON)
@@ -28,4 +28,4 @@ if(UNIX AND NOT APPLE)
 endif()
 
 # Link the libs
-target_link_libraries(SecureText-qt Qt5::Widgets OpenSSL::Crypto)
+target_link_libraries(SecureText-qt Qt6::Widgets OpenSSL::Crypto)

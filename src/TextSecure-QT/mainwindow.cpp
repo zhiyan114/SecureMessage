@@ -600,7 +600,7 @@ void MainWindow::on_ARDecryptBtn_clicked()
         ui->ARDecInput->setPlainText("");
         break;
     case 0:
-        ui->ARMessageStatus->setText("Message is original: Yes");
+        ui->ARMessageStatus->setText("Message is original: No");
         ui->ARDecOutput->setPlainText(*DecData);
         ui->ARDecInput->setPlainText("");
         break;

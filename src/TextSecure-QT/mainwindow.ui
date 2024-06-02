@@ -470,7 +470,6 @@
           <property name="font">
            <font>
             <pointsize>20</pointsize>
-            <weight>75</weight>
             <bold>true</bold>
             <underline>true</underline>
            </font>
@@ -497,7 +496,7 @@
            <bool>false</bool>
           </property>
           <property name="text">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You may use the software for any purposes and I will not be liable for the outcome. Both AES and RSA mode are available. It is recommended to use AES mode for message encryption then use the RSA as a AES Key encrytion since it has a severe size limit and is not designed for that purpose either way. (In a later release, a combination of both mode will be available so that you do not need to store the AES Key and data seperately).&lt;/p&gt;&lt;p&gt;The AES/RSA is simply a way to encrypt data by using an RSA key. It works by encrypting a random key and then embed it with the data which is encrypted with AES. If you're using an RSA keysize that are less than 592-bit a 128-bit AES key will be used instead of 256-bit AES key.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;A software by &lt;/span&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;zhiyan114&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;. View the source code &lt;/span&gt;&lt;a href=&quot;https://github.com/zhiyan114/SecureMessage&quot;&gt;&lt;span style=&quot; font-size:10pt; text-decoration: underline; color:#0000ff;&quot;&gt;here&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You may use the software for any purposes and I will not be liable for the outcome. Both AES and RSA mode are available. It is recommended to use AES mode for message encryption then use the RSA as a AES Key encrytion since it has a severe size limit and is not designed for that purpose either way. (In a later release, a combination of both mode will be available so that you do not need to store the AES Key and data seperately).&lt;/p&gt;&lt;p&gt;The AES/RSA is simply a way to encrypt data by using an RSA key. It works by encrypting a random key and then embed it with the data which is encrypted with AES. If you're using an RSA keysize that are less than 592-bit a 128-bit AES key will be used instead of 256-bit AES key.&lt;/p&gt;&lt;p&gt;A software by &lt;span style=&quot; font-weight:600;&quot;&gt;zhiyan114&lt;/span&gt;. View the source code here: https://github.com/zhiyan114/SecureMessage&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="scaledContents">
            <bool>true</bool>
@@ -525,7 +524,7 @@
      <x>0</x>
      <y>0</y>
      <width>855</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
