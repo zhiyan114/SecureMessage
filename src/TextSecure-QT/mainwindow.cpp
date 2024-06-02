@@ -6,6 +6,7 @@
 #include <openssl/pem.h>
 #include <openssl/x509.h>
 #include <stdio.h>
+
 #ifdef _WIN64
 // x64 bit Windows library
 #include <process.h>
@@ -37,7 +38,14 @@ void MainWindow::on_EncryptBtn_clicked()
     QMessageBox * msgbox = new QMessageBox(this);
     msgbox->setWindowTitle("AES Encryption");
     QByteArray * Result = new QByteArray();
-    switch(Encryption::IAES::Encrypt(ui->KeyInput->text().toUtf8(),ui->EncInput->toPlainText().toUtf8(),Result)) {
+    QByteArray EncKey = ui->KeyInput->text().toUtf8();
+
+    // Check if the key is supposed to be hashed
+    if(!ui->isRawKey->isChecked())
+        Utils::SHA256(&EncKey);
+
+    // Start Encrypting
+    switch(Encryption::IAES::Encrypt(EncKey,ui->EncInput->toPlainText().toUtf8(),Result)) {
     case 1:
         ui->EncOutput->setPlainText(Result->toBase64());
         ui->EncInput->setPlainText("");
@@ -642,5 +650,18 @@ void MainWindow::on_ARDecryptClear_clicked()
         // Dont do it
         break;
     }
+}
+
+
+void MainWindow::on_isRawKey_stateChanged(int state)
+{
+    QString original = "Your AES Key Here";
+    QString message = " (16, 24, or 32 bytes long (or characters if each character is worth 1 byte))";
+
+    // Unchecked or use SHA1 hashed key message
+    if(state == 0)
+        ui->KeyInput->setPlaceholderText(original);
+    else if (state == 2) // Checked or raw key encryption message
+        ui->KeyInput->setPlaceholderText(original + message);
 }
 

@@ -50,6 +50,9 @@ private slots:
 
     void on_ARDecryptClear_clicked();
 
+
+    void on_isRawKey_stateChanged(int arg1);
+
 private:
     Ui::MainWindow *ui;
 };

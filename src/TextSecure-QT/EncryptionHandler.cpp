@@ -13,6 +13,7 @@
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 #include <openssl/x509.h>
+#include <openssl/sha.h>
 
 
 #ifdef _WIN64
@@ -253,4 +254,24 @@ int Encryption::IRSA::KeySize(QByteArray RSAKey,bool isPublic) {
     int RSAKeySize = RSA_size(RSAKeyRSA);
     RSA_free(RSAKeyRSA);
     return RSAKeySize;
+}
+
+/* Return Values:
+ * 1 - success
+ */
+int Utils::SHA256(QByteArray * data) {
+    unsigned char result[32];
+    unsigned int len;
+    const EVP_MD* EVP = EVP_sha256();
+    EVP_MD_CTX* MDCTX = EVP_MD_CTX_new();
+    EVP_DigestInit_ex(MDCTX, EVP, NULL);
+    EVP_DigestUpdate(MDCTX, data->constData(), data->length());
+    EVP_DigestFinal_ex(MDCTX, result, &len);
+    EVP_MD_CTX_free(MDCTX);
+
+    // Write Data
+    data->clear();
+    data->append((const char*)result, len);
+
+    return 1;
 }

@@ -12,4 +12,8 @@ int Decrypt(QByteArray PriKey, QByteArray Data, QByteArray * Result);
 int KeySize(QByteArray RSAKey, bool isPublic);
 }
 }
+
+namespace Utils {
+int SHA256(QByteArray * data);
+}
 #endif // ENCRYPTIONHANDLER_H
