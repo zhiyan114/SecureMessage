@@ -79,12 +79,12 @@ void MainWindow::on_DecryptBtn_clicked()
         msgbox->setText("Your AES key must be a 16, 24, or 32 bytes long. Current size: "+QString::number(ui->KeyInput->text().toUtf8().size()));
         msgbox->exec();
         break;
-   case -2:
+    case -2:
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->setText("Invalid input has been supplied");
         msgbox->exec();
         break;
-   default:
+    default:
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->setText("Something else went wrong");
         msgbox->exec();
@@ -98,27 +98,27 @@ void MainWindow::on_DecryptBtn_clicked()
 
 void MainWindow::on_EncClear_clicked()
 {
- switch(QMessageBox::question(this,"Clear Encryption Message","Are you sure that you want to clear your encrypted message?",QMessageBox::Yes | QMessageBox::No)) {
+    switch(QMessageBox::question(this,"Clear Encryption Message","Are you sure that you want to clear your encrypted message?",QMessageBox::Yes | QMessageBox::No)) {
     case QMessageBox::Yes:
-     // Yes Do it
-     ui->EncOutput->setPlainText("");
-     break;
+        // Yes Do it
+        ui->EncOutput->setPlainText("");
+        break;
     default:
-     // Dont do it
-     break;
- }
+        // Dont do it
+        break;
+    }
 }
 
 
 void MainWindow::on_DecClear_clicked()
 {
     switch(QMessageBox::question(this,"Clear Decryption Message","Are you sure that you want to clear your decrypted message?",QMessageBox::Yes | QMessageBox::No)) {
-       case QMessageBox::Yes:
+    case QMessageBox::Yes:
         // Yes Do it
         ui->DecOutput->setPlainText("");
         ui->MessageStatus->setText("Message is original: NULL");
         break;
-       default:
+    default:
         // Dont do it
         break;
     }
@@ -143,77 +143,64 @@ void MainWindow::on_GenRSAKey_clicked()
         delete msgbox;
         return;
     } else if(UserKeySize > 16384) {
-        msgbox->setText("RSA key size is too big. Maximum size is 16384. (Why do you need such as big size key. 2048 is already enough and some software doesn't support big key sizes)");
+        msgbox->setText("RSA key size is too big. Maximum size is 16384. (Why do you need such as big size key? 2048 is already enough and some software doesn't support big sizes)");
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
-        delete msgbox;
-        return;
-    }
-    RSA* RSAData = RSA_new();
-    BIGNUM * BigNum = BN_new();
-    BN_set_word(BigNum, RSA_F4);
-    if(RSA_generate_key_ex(RSAData,UserKeySize,BigNum,NULL) == 0) {
-        msgbox->setText("RSA Key has failed to generate, please try again");
-        msgbox->setIcon(QMessageBox::Icon::Critical);
-        msgbox->exec();
-        BN_free(BigNum);
-        //RSA_free(RSAData);
         delete msgbox;
         return;
     }
 
-    EVP_PKEY * RSAKey = EVP_PKEY_new();
-    if(EVP_PKEY_assign_RSA(RSAKey, RSAData) == 0) {
-        msgbox->setText("Key Assignment Failed");
+    // Generate the keys
+    EVP_PKEY *RSAKey = NULL;
+    EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL); // ctx is nullable, handle it later
+    EVP_PKEY_keygen_init(ctx); // <= 0 are ERRORS
+    EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, UserKeySize);  // <= 0 are ERRORS
+    if (EVP_PKEY_keygen(ctx, &RSAKey) <= 0) {
+        msgbox->setText("RSA Key has failed to generate, please try again");
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
-        EVP_PKEY_free(RSAKey);
-        BN_free(BigNum);
-        //RSA_free(RSAData);
         delete msgbox;
         return;
     }
+
+    // Set Private Key
     BIO* PriKeyBio = BIO_new(BIO_s_mem());
     if(PEM_write_bio_PKCS8PrivateKey(PriKeyBio, RSAKey,NULL,NULL,0,NULL,NULL) == 0) {
         msgbox->setText("Failed To Export Private Key");
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
         EVP_PKEY_free(RSAKey);
-        BN_free(BigNum);
         delete msgbox;
         BIO_free_all(PriKeyBio);
-        //RSA_free(RSAData);
-        return;
-    }
-    BIO* PubKeyBio = BIO_new(BIO_s_mem());
-    if(PEM_write_bio_RSAPublicKey(PubKeyBio,RSAData) == 0) {
-        msgbox->setText("Failed To Export Public Key");
-        msgbox->setIcon(QMessageBox::Icon::Critical);
-        msgbox->exec();
-        EVP_PKEY_free(RSAKey);
-        BN_free(BigNum);
-        delete msgbox;
-        BIO_free_all(PriKeyBio);
-        BIO_free_all(PubKeyBio);
         //RSA_free(RSAData);
         return;
     }
     BUF_MEM *PriKey;
-    BUF_MEM *PubKey;
     BIO_get_mem_ptr(PriKeyBio, &PriKey);
-    BIO_get_mem_ptr(PubKeyBio, &PubKey);
     ui->PrivateKeyInput->setPlainText(QString::fromUtf8(PriKey->data,PriKey->length));
+    BIO_free_all(PriKeyBio);
+
+    // Set Public Key
+    BIO* PubKeyBio = BIO_new(BIO_s_mem());
+    if(PEM_write_bio_PUBKEY(PubKeyBio,RSAKey) == 0) {
+        msgbox->setText("Failed To Export Public Key");
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->exec();
+        EVP_PKEY_free(RSAKey);
+        delete msgbox;
+        BIO_free_all(PubKeyBio);
+        return;
+    }
+    BUF_MEM *PubKey;
+    BIO_get_mem_ptr(PubKeyBio, &PubKey);
     ui->PublicKeyInput->setPlainText(QString::fromUtf8(PubKey->data,PubKey->length));
+    BIO_free_all(PubKeyBio);
+
     msgbox->setText("RSA Key has been successfully generated");
     msgbox->setIcon(QMessageBox::Icon::Information);
     msgbox->exec();
     EVP_PKEY_free(RSAKey);
-    BN_free(BigNum);
-    BIO_free_all(PriKeyBio);
-    BIO_free_all(PubKeyBio);
-    //RSA_free(RSAData);
     delete msgbox;
-
 }
 
 
@@ -237,12 +224,12 @@ void MainWindow::on_REncryptBtn_clicked()
         msgbox->setText("Your message is too long for your key size, please reduce it");
         msgbox->exec();
         break;
-   case -4:
+    case -4:
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->setText("RSA was unable to encrypt your message");
         msgbox->exec();
         break;
-   default:
+    default:
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->setText("Something else went wrong");
         msgbox->exec();
@@ -274,12 +261,12 @@ void MainWindow::on_RDecryptBtn_clicked()
         msgbox->setText("Invalid input has been supplied");
         msgbox->exec();
         break;
-   case -4:
+    case -4:
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->setText("RSA was unable to decrypt your message");
         msgbox->exec();
         break;
-   default:
+    default:
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->setText("Something else went wrong");
         msgbox->exec();
@@ -294,11 +281,11 @@ void MainWindow::on_RDecryptBtn_clicked()
 void MainWindow::on_REncryptClear_clicked()
 {
     switch(QMessageBox::question(this,"Clear Encryption Message","Are you sure that you want to clear your encrypted message?",QMessageBox::Yes | QMessageBox::No)) {
-       case QMessageBox::Yes:
+    case QMessageBox::Yes:
         // Yes Do it
         ui->REncOutput->setPlainText("");
         break;
-       default:
+    default:
         // Dont do it
         break;
     }
@@ -308,11 +295,11 @@ void MainWindow::on_REncryptClear_clicked()
 void MainWindow::on_RDecryptClear_clicked()
 {
     switch(QMessageBox::question(this,"Clear Decryption Message","Are you sure that you want to clear your decrypted message?",QMessageBox::Yes | QMessageBox::No)) {
-       case QMessageBox::Yes:
+    case QMessageBox::Yes:
         // Yes Do it
         ui->RDecOutput->setPlainText("");
         break;
-       default:
+    default:
         // Dont do it
         break;
     }
@@ -323,16 +310,20 @@ void MainWindow::on_PriToPubKeyBtn_clicked()
 {
     QMessageBox *msgbox = new QMessageBox(this);
     msgbox->setWindowTitle("Key Converter");
+
+    // Read Private Key
     BIO* PriKeyBio = BIO_new(BIO_s_mem());
     BIO_write(PriKeyBio,ui->PrivateKeyInput->toPlainText().toStdString().c_str(),ui->PrivateKeyInput->toPlainText().toUtf8().size());
-    RSA* PriKeyRSA = PEM_read_bio_RSAPrivateKey(PriKeyBio,NULL,NULL,const_cast<char*>(""));
+    EVP_PKEY* PriKey = PEM_read_bio_PrivateKey(PriKeyBio,NULL,NULL,const_cast<char*>(""));
+    BIO_free_all(PriKeyBio);
+
+    // Extract Public Key
     BIO* PubKeyBio = BIO_new(BIO_s_mem());
-    if(PEM_write_bio_RSAPublicKey(PubKeyBio,PriKeyRSA) <= 0) {
+    if(PEM_write_bio_PUBKEY(PubKeyBio,PriKey) <= 0) {
         msgbox->setText("Failed To Convert Private Key To Public Key");
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
         delete msgbox;
-        BIO_free_all(PriKeyBio);
         BIO_free_all(PubKeyBio);
         //RSA_free(RSAData);
         return;
@@ -340,12 +331,12 @@ void MainWindow::on_PriToPubKeyBtn_clicked()
     BUF_MEM *PubKey;
     BIO_get_mem_ptr(PubKeyBio, &PubKey);
     ui->PublicKeyInput->setPlainText(QString::fromUtf8(PubKey->data,PubKey->length));
+    BIO_free_all(PubKeyBio);
+
     msgbox->setIcon(QMessageBox::Icon::Information);
     msgbox->setText("Successfully extract public key from private key");
     msgbox->exec();
     delete msgbox;
-    BIO_free_all(PriKeyBio);
-    BIO_free_all(PubKeyBio);
 }
 
 
@@ -353,34 +344,51 @@ void MainWindow::on_ImportPubCert_clicked()
 {
     QMessageBox *msgbox = new QMessageBox(this);
     msgbox->setWindowTitle("Key Converter");
+
+    // Get RSA Key From Cert
     BIO* CertKeyBio = BIO_new(BIO_s_mem());
     BIO_write(CertKeyBio,ui->PublicCertInput->toPlainText().toStdString().c_str(),ui->PublicCertInput->toPlainText().toUtf8().size());
     X509 * PubCert = PEM_read_bio_X509(CertKeyBio,NULL,NULL,NULL);
-    EVP_PKEY * PubKeyObj = X509_get_pubkey(PubCert);
-    BUF_MEM *PubKey;
-    BIO* PubKeyBio = BIO_new(BIO_s_mem());
-    if(PubKeyObj == NULL) {
+    EVP_PKEY * PubKey = X509_get_pubkey(PubCert);
+    X509_free(PubCert);
+    if(PubKey == NULL) {
+        BIO_free_all(CertKeyBio);
         msgbox->setText("Invalid Certificate was provided");
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
         delete msgbox;
         return;
     }
-    RSA* PubKeyRSA = EVP_PKEY_get1_RSA(PubKeyObj);
-    if(PEM_write_bio_RSAPublicKey(PubKeyBio,PubKeyRSA)  <= 0) {
-        msgbox->setText("Unable to convert certificate to public key");
+    BIO_free_all(CertKeyBio);
+
+    // Check if the key is RSA (ECC Pending...)
+    if(EVP_PKEY_base_id(PubKey) != EVP_PKEY_RSA) {
+        msgbox->setText("Certificate is not a RSA-based");
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
+        EVP_PKEY_free(PubKey);
         delete msgbox;
         return;
     }
 
-    BIO_get_mem_ptr(PubKeyBio, &PubKey);
-    ui->PublicKeyInput->setPlainText(QString::fromUtf8(PubKey->data,PubKey->length));
+    BUF_MEM *PubKeyBuff;
+    BIO* PubKeyBio = BIO_new(BIO_s_mem());
+    if(PEM_write_bio_PUBKEY(PubKeyBio,PubKey)  <= 0) {
+        msgbox->setText("Unable to convert certificate to public key");
+        msgbox->setIcon(QMessageBox::Icon::Critical);
+        msgbox->exec();
+        EVP_PKEY_free(PubKey);
+        BIO_free_all(PubKeyBio);
+        delete msgbox;
+        return;
+    }
+    EVP_PKEY_free(PubKey);
+
+    BIO_get_mem_ptr(PubKeyBio, &PubKeyBuff);
+    ui->PublicKeyInput->setPlainText(QString::fromUtf8(PubKeyBuff->data,PubKeyBuff->length));
     ui->PublicCertInput->setPlainText("");
-    BIO_free_all(CertKeyBio);
     BIO_free_all(PubKeyBio);
-    X509_free(PubCert);
+
     msgbox->setText("Successfully converted public certificate to public key");
     msgbox->setIcon(QMessageBox::Icon::Information);
     msgbox->exec();
@@ -395,37 +403,35 @@ void MainWindow::on_PriKeyEncBtn_clicked()
     BIO* PriKeyBio = BIO_new(BIO_s_mem());
     BIO_write(PriKeyBio,ui->PrivateKeyInput->toPlainText().toStdString().c_str(),ui->PrivateKeyInput->toPlainText().toUtf8().size());
 
-    RSA* PriKeyRSA = PEM_read_bio_RSAPrivateKey(PriKeyBio,NULL,NULL,const_cast<char*>(""));
-    BIO* EncPriKeyBio = BIO_new(BIO_s_mem());
-    EVP_PKEY * RSAKey = EVP_PKEY_new();
-    if(EVP_PKEY_assign_RSA(RSAKey, PriKeyRSA) <= 0) {
+    EVP_PKEY * RSAKey = PEM_read_bio_PrivateKey(PriKeyBio,NULL,NULL,const_cast<char*>(""));
+    if(RSAKey == NULL) {
         msgbox->setText("Invalid RSA Private key was provided or you're trying to encrypt an already encrypted key");
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
-        EVP_PKEY_free(RSAKey);
-        //RSA_free(RSAData);
+        BIO_free_all(PriKeyBio);
         delete msgbox;
         return;
     }
+    BIO_free_all(PriKeyBio);
+
+    BIO* EncPriKeyBio = BIO_new(BIO_s_mem());
     if(PEM_write_bio_PKCS8PrivateKey(EncPriKeyBio,RSAKey,EVP_des_ede3_cbc(),NULL,0,0,ui->PriKeyPassInput->text().toUtf8().data()) <= 0) {
         msgbox->setText("Failed To Encrypt Private Key or you forgot to set a passphrase");
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
         delete msgbox;
-        BIO_free_all(PriKeyBio);
         BIO_free_all(EncPriKeyBio);
-        //RSA_free(RSAData);
         return;
     }
     BUF_MEM *EncPriKey;
     BIO_get_mem_ptr(EncPriKeyBio, &EncPriKey);
     ui->PrivateKeyInput->setPlainText(QString::fromUtf8(EncPriKey->data,EncPriKey->length));
     ui->PriKeyPassInput->setText("");
+
     msgbox->setIcon(QMessageBox::Icon::Information);
     msgbox->setText("Successfully encrypted your private key");
     msgbox->exec();
     delete msgbox;
-    BIO_free_all(PriKeyBio);
     BIO_free_all(EncPriKeyBio);
 }
 
@@ -434,28 +440,27 @@ void MainWindow::on_PriKeyDecBtn_clicked()
 {
     QMessageBox *msgbox = new QMessageBox(this);
     msgbox->setWindowTitle("Key Encryptor");
+
     BIO* PriKeyBio = BIO_new(BIO_s_mem());
     BIO_write(PriKeyBio,ui->PrivateKeyInput->toPlainText().toStdString().c_str(),ui->PrivateKeyInput->toPlainText().toUtf8().size());
-    RSA* PriKeyRSA = PEM_read_bio_RSAPrivateKey(PriKeyBio,NULL,0,ui->PriKeyPassInput->text().toUtf8().data());
-    BIO* EncPriKeyBio = BIO_new(BIO_s_mem());
-    EVP_PKEY * RSAKey = EVP_PKEY_new();
-    if(EVP_PKEY_assign_RSA(RSAKey, PriKeyRSA) <= 0) {
+    EVP_PKEY * RSAKey = PEM_read_bio_PrivateKey(PriKeyBio,NULL,0,ui->PriKeyPassInput->text().toUtf8().data());
+    if(RSAKey == NULL) {
         msgbox->setText("Invalid Private Key or Passphrase");
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
         EVP_PKEY_free(RSAKey);
-        //RSA_free(RSAData);
         delete msgbox;
         return;
     }
+    BIO_free_all(PriKeyBio);
+
+    BIO* EncPriKeyBio = BIO_new(BIO_s_mem());
     if(PEM_write_bio_PKCS8PrivateKey(EncPriKeyBio,RSAKey,NULL,NULL,0,NULL,NULL) <= 0) {
         msgbox->setText("Failed To Decrypt Private Key");
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->exec();
         delete msgbox;
-        BIO_free_all(PriKeyBio);
         BIO_free_all(EncPriKeyBio);
-        //RSA_free(RSAData);
         return;
     }
     BUF_MEM *EncPriKey;
@@ -466,7 +471,6 @@ void MainWindow::on_PriKeyDecBtn_clicked()
     msgbox->setText("Successfully decrypted your private key");
     msgbox->exec();
     delete msgbox;
-    BIO_free_all(PriKeyBio);
     BIO_free_all(EncPriKeyBio);
 }
 
@@ -495,14 +499,14 @@ void MainWindow::on_AREncryptBtn_clicked()
         delete EncryptedAESKey;
         delete msgbox;
         return;
-   case -4:
+    case -4:
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->setText("Unable to encrypt your AES Key");
         msgbox->exec();
         delete EncryptedAESKey;
         delete msgbox;
         return;
-   default:
+    default:
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->setText("Something else went wrong");
         msgbox->exec();
@@ -565,14 +569,14 @@ void MainWindow::on_ARDecryptBtn_clicked()
         delete DecryptedAESKey;
         delete msgbox;
         return;
-   case -4:
+    case -4:
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->setText("Unable to decrypt your AES Key");
         msgbox->exec();
         delete DecryptedAESKey;
         delete msgbox;
         return;
-   default:
+    default:
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->setText("Something else went wrong");
         msgbox->exec();
@@ -593,7 +597,7 @@ void MainWindow::on_ARDecryptBtn_clicked()
         ui->ARDecOutput->setPlainText(*DecData);
         ui->ARDecInput->setPlainText("");
         break;
-   default:
+    default:
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->setText("Something else went wrong");
         msgbox->exec();
@@ -608,11 +612,11 @@ void MainWindow::on_ARDecryptBtn_clicked()
 void MainWindow::on_AREncryptClear_clicked()
 {
     switch(QMessageBox::question(this,"Clear Encryption Message","Are you sure that you want to clear your encrypted message?",QMessageBox::Yes | QMessageBox::No)) {
-       case QMessageBox::Yes:
+    case QMessageBox::Yes:
         // Yes Do it
         ui->AREncOutput->setPlainText("");
         break;
-       default:
+    default:
         // Dont do it
         break;
     }
@@ -622,12 +626,12 @@ void MainWindow::on_AREncryptClear_clicked()
 void MainWindow::on_ARDecryptClear_clicked()
 {
     switch(QMessageBox::question(this,"Clear Decryption Message","Are you sure that you want to clear your decrypted message?",QMessageBox::Yes | QMessageBox::No)) {
-       case QMessageBox::Yes:
+    case QMessageBox::Yes:
         // Yes Do it
         ui->ARDecOutput->setPlainText("");
         ui->ARMessageStatus->setText("Message is original: NULL");
         break;
-       default:
+    default:
         // Dont do it
         break;
     }
