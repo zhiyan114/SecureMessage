@@ -12,7 +12,7 @@ pool:
 
 steps:
 - script: |
-    sudo apt-get install qt5-default libssl-dev
+    sudo apt-get install qt6-default libssl-dev
   displayName: "Install Required Dependency"
 - task: CMake@1
   displayName: 'Init CMake Files for build'
