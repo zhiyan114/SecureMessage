@@ -654,5 +654,25 @@ void MainWindow::on_isRawKey_stateChanged(int state)
         ui->KeyInput->setPlaceholderText(original);
     else if (state == 2) // Checked or raw key encryption message
         ui->KeyInput->setPlaceholderText(original + message);
+    ui->genAESKeyBtn->setEnabled(state == 2);
+}
+
+
+void MainWindow::on_genAESKeyBtn_clicked()
+{
+    // Possible password combination
+    const char strList[78] = {'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
+                       '1','2','3','4','5','6','7','8','9','0','!','#','*','&','+','-',':','?','@','$','%','=','^',';',':','~',
+                      'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'};
+
+    // Generate random bytes and convert it to password string
+    unsigned int rngPwd[32];
+    RandByte(rngPwd, 32*sizeof(int));
+    QString TextPassword = "";
+    for(char i=0; i<32; i++)
+        TextPassword += strList[rngPwd[i] % 78];
+
+    // Set the password on the textbox
+    ui->KeyInput->setText(TextPassword);
 }
 

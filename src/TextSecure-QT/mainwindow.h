@@ -53,6 +53,8 @@ private slots:
 
     void on_isRawKey_stateChanged(int arg1);
 
+    void on_genAESKeyBtn_clicked();
+
 private:
     Ui::MainWindow *ui;
 };

@@ -18,10 +18,10 @@
 #include <openssl/x509.h>
 #include <openssl/sha.h>
 
-void RandByte(unsigned char* byteArr,int size) {
+void RandByte(void* byteArr,int size) {
 
 #ifdef _WIN64
-    BCryptGenRandom(BCRYPT_RNG_ALG_HANDLE, byteArr, size, 0);
+    BCryptGenRandom(BCRYPT_RNG_ALG_HANDLE, (unsigned char*)byteArr, size, 0);
 #elif __linux || __unix__
     // /dev/urandom grabber lol
     std::ifstream urandom("/dev/urandom", std::ios::binary);
