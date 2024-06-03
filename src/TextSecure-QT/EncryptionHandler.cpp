@@ -19,12 +19,13 @@
 #include <openssl/sha.h>
 
 void RandByte(unsigned char* byteArr,int size) {
+
 #ifdef _WIN64
     BCryptGenRandom(BCRYPT_RNG_ALG_HANDLE, byteArr, size, 0);
 #elif __linux || __unix__
     // /dev/urandom grabber lol
     std::ifstream urandom("/dev/urandom", std::ios::binary);
-    urandom.read(byteArr, size);
+    urandom.read((char*)byteArr, size);
 #else
     #error Unsupported Target OS (RandByte Method)
 #endif
@@ -112,31 +113,40 @@ int Encryption::IAES::Decrypt(QByteArray Key, QByteArray Data, QByteArray * Resu
  * -2 - PKEY CTX init failed
  * -3 - Padding Failed
  * -4 - Encryption Failed
+ * -5 - Supplied key is not RSA
  */
 int Encryption::IRSA::Encrypt(QByteArray IPubKey, QByteArray Data, QByteArray * Result) {
     BIO* PubKeyBio = BIO_new(BIO_s_mem());
     BIO_write(PubKeyBio,IPubKey.constData(),IPubKey.size());
-    RSA* PubKeyRSA = PEM_read_bio_RSAPublicKey(PubKeyBio,NULL,NULL,NULL); //PEM_read_bio_PUBKEY(PubKeyBio,NULL,NULL,NULL);
-    if(PubKeyRSA == NULL) {
+
+    // Import RSA Key
+    EVP_PKEY * PubKey = PEM_read_bio_PUBKEY(PubKeyBio,NULL,NULL,NULL);
+    BIO_free_all(PubKeyBio);
+    if(PubKey == NULL) return 0;
+
+    // Check to ensure the key is RSA (ECC support is pending...)
+    if(EVP_PKEY_base_id(PubKey) != EVP_PKEY_RSA)
+        return -5;
+
+    // Check RSA Key Size
+    BIGNUM *bn = NULL;
+    if(!EVP_PKEY_get_bn_param(PubKey, "n", &bn))
         return 0;
-    }
-    if(Data.size() > RSA_size(PubKeyRSA)-42) {
-        BIO_free_all(PubKeyBio);
+    if(Data.size() > BN_num_bytes(bn)-42) {
+        EVP_PKEY_free(PubKey);
+        BN_free(bn);
         return -1;
     }
-    EVP_PKEY * PubKey = EVP_PKEY_new();
-    EVP_PKEY_assign_RSA(PubKey, PubKeyRSA);
+    BN_free(bn);
+
     EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(PubKey,NULL);
     if(EVP_PKEY_encrypt_init(ctx) <=0) {
-
         EVP_PKEY_free(PubKey);
-        BIO_free_all(PubKeyBio);
         EVP_PKEY_CTX_free(ctx);
         return -2;
     }
     if(EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING) <=0) {
         EVP_PKEY_free(PubKey);
-        BIO_free_all(PubKeyBio);
         EVP_PKEY_CTX_free(ctx);
         return -3;
     }
@@ -146,14 +156,12 @@ int Encryption::IRSA::Encrypt(QByteArray IPubKey, QByteArray Data, QByteArray * 
     if(EVP_PKEY_encrypt(ctx,CipherText,&OutSize, (const unsigned char*)Data.constData(),Data.size()) <=0) {
         EVP_PKEY_free(PubKey);
         EVP_PKEY_CTX_free(ctx);
-        BIO_free_all(PubKeyBio);
         delete[] CipherText;
         return -4;
     }
     Result->append((const char*)CipherText,OutSize);
     EVP_PKEY_free(PubKey);
     EVP_PKEY_CTX_free(ctx);
-    BIO_free_all(PubKeyBio);
     delete[] CipherText;
     return 1;
 }
@@ -165,32 +173,42 @@ int Encryption::IRSA::Encrypt(QByteArray IPubKey, QByteArray Data, QByteArray * 
  * -2 - PKEY CTX init failed
  * -3 - Padding Failed
  * -4 - Decryption Failed
+ * -5 - Supplied key is not RSA
  */
 int Encryption::IRSA::Decrypt(QByteArray IPriKey, QByteArray Data, QByteArray * Result) {
     BIO* PriKeyBio = BIO_new(BIO_s_mem());
     BIO_write(PriKeyBio,IPriKey.constData(),IPriKey.size());
-    RSA* PriKeyRSA = PEM_read_bio_RSAPrivateKey(PriKeyBio,NULL,NULL,const_cast<char*>(""));
-    if(PriKeyRSA == NULL) {
-        BIO_free_all(PriKeyBio);
+
+    // Read private key
+    EVP_PKEY * PriKey = PEM_read_bio_PrivateKey(PriKeyBio,NULL,NULL,const_cast<char*>(""));
+    BIO_free_all(PriKeyBio);
+    if(PriKey == NULL) return 0;
+
+    // Check to ensure the key is RSA (ECC support is pending...)
+    if(EVP_PKEY_base_id(PriKey) != EVP_PKEY_RSA)
+        return -5;
+
+    // Check RSA Key Size
+    BIGNUM *bn = NULL;
+    if(!EVP_PKEY_get_bn_param(PriKey, "n", &bn))
         return 0;
-    }
-    if(Data.size() != RSA_size(PriKeyRSA)) {
-        BIO_free_all(PriKeyBio);
+    if(Data.size() > BN_num_bytes(bn)) {
+        EVP_PKEY_free(PriKey);
+        BN_free(bn);
         return -1;
     }
-    EVP_PKEY * PriKey = EVP_PKEY_new();
-    EVP_PKEY_assign_RSA(PriKey, PriKeyRSA);
+    BN_free(bn);
+
     EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(PriKey,NULL);
     if(EVP_PKEY_decrypt_init(ctx) <=0) {
         EVP_PKEY_free(PriKey);
         EVP_PKEY_CTX_free(ctx);
-        BIO_free_all(PriKeyBio);
         return -2;
     }
     if(EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING) <=0) {
         EVP_PKEY_free(PriKey);
         EVP_PKEY_CTX_free(ctx);
-        BIO_free_all(PriKeyBio);
+
         return -3;
     }
     size_t OutSize;
@@ -199,14 +217,12 @@ int Encryption::IRSA::Decrypt(QByteArray IPriKey, QByteArray Data, QByteArray * 
     if(EVP_PKEY_decrypt(ctx,PlainText,&OutSize, (const unsigned char*)Data.constData(),Data.size()) <=0) {
         EVP_PKEY_free(PriKey);
         EVP_PKEY_CTX_free(ctx);
-        BIO_free_all(PriKeyBio);
         delete[] PlainText;
         return -4;
     }
     Result->append((const char*)PlainText,OutSize);
     EVP_PKEY_free(PriKey);
     EVP_PKEY_CTX_free(ctx);
-    BIO_free_all(PriKeyBio);
     delete[] PlainText;
     return 1;
 }
@@ -214,25 +230,31 @@ int Encryption::IRSA::Decrypt(QByteArray IPriKey, QByteArray Data, QByteArray * 
  * Return Values:
  * Dynamic - RSA Key Size
  * -1 - Invalid RSA Key
+ * -2 - Supplied Key is not RSA
  */
 int Encryption::IRSA::KeySize(QByteArray RSAKey,bool isPublic) {
     BIO* RSAKeyBio = BIO_new(BIO_s_mem());
     BIO_write(RSAKeyBio,RSAKey.constData(),RSAKey.size());
-    RSA* RSAKeyRSA;
-    if(isPublic) {
-        RSAKeyRSA = PEM_read_bio_RSAPublicKey(RSAKeyBio,NULL,NULL,NULL);
-    } else {
-        RSAKeyRSA = PEM_read_bio_RSAPrivateKey(RSAKeyBio,NULL,NULL,const_cast<char*>(""));
-    }
-    if(RSAKeyRSA == NULL) {
-        // Not a private key? Then it an invalid key
-        BIO_free_all(RSAKeyBio);
-        return -1;
-    }
+    EVP_PKEY* RSAKeyRSA = NULL;
+    if(isPublic)
+        RSAKeyRSA = PEM_read_bio_PUBKEY(RSAKeyBio,NULL,NULL,NULL);
+    else
+        RSAKeyRSA = PEM_read_bio_PrivateKey(RSAKeyBio,NULL,NULL,const_cast<char*>(""));
     BIO_free_all(RSAKeyBio);
-    int RSAKeySize = RSA_size(RSAKeyRSA);
-    RSA_free(RSAKeyRSA);
-    return RSAKeySize;
+    if(RSAKeyRSA == NULL) return -1;
+
+    if(EVP_PKEY_base_id(RSAKeyRSA) != EVP_PKEY_RSA)
+        return -2;
+
+    // Get key size
+    BIGNUM *bn = NULL;
+    if(!EVP_PKEY_get_bn_param(RSAKeyRSA, "n", &bn))
+        return 0;
+    EVP_PKEY_free(RSAKeyRSA);
+
+    int keysize = BN_num_bytes(bn);
+    BN_free(bn);
+    return keysize;
 }
 
 /* Return Values:

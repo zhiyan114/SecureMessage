@@ -7,14 +7,6 @@
 #include <openssl/x509.h>
 #include <stdio.h>
 
-#ifdef _WIN64
-// x64 bit Windows library
-#include <process.h>
-#elif __linux__ || __unix__
-// x64 bit Linux library
-#include <unistd.h>
-#endif
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -482,25 +474,16 @@ void MainWindow::on_AREncryptBtn_clicked()
 {
     QMessageBox * msgbox = new QMessageBox(this);
     msgbox->setWindowTitle("AES/RSA Encryption");
-    unsigned char* RandKey;
+
+    // Prepare Random AES Key
+    unsigned char RandKey[32];
     int KeySize = 0;
-    if((Encryption::IRSA::KeySize(ui->PublicKeyInput->toPlainText().toUtf8(),true)/8)-42 < 32) {
-        RandKey = new unsigned char[16];
+    if((Encryption::IRSA::KeySize(ui->PublicKeyInput->toPlainText().toUtf8(),true)/8)-42 < 32)
         KeySize = 16;
-    } else {
-        RandKey = new unsigned char[32];
+    else
         KeySize = 32;
-    }
-#ifdef _WIN64
-// x64 bit Windows library
-srand( (unsigned) time(NULL) * _getpid()*(rand()%255));
-#elif __linux__ || __unix__
-// x64 bit Linux library
-srand( (unsigned) time(NULL) * getpid()*(rand()%255));
-#endif
-    for (int i=0;i<KeySize;i++) {
-        RandKey[i] = (unsigned char) rand();
-    }
+    RandByte(RandKey, KeySize);
+
     QByteArray * EncryptedAESKey = new QByteArray();
     switch(Encryption::IRSA::Encrypt(ui->PublicKeyInput->toPlainText().toUtf8(),QByteArray::fromRawData((const char*)RandKey,KeySize),EncryptedAESKey)) {
     case 1:
@@ -510,7 +493,6 @@ srand( (unsigned) time(NULL) * getpid()*(rand()%255));
         msgbox->setText("Invalid Public RSA Key has been detected");
         msgbox->exec();
         delete EncryptedAESKey;
-        delete RandKey;
         delete msgbox;
         return;
    case -4:
@@ -518,7 +500,6 @@ srand( (unsigned) time(NULL) * getpid()*(rand()%255));
         msgbox->setText("Unable to encrypt your AES Key");
         msgbox->exec();
         delete EncryptedAESKey;
-        delete RandKey;
         delete msgbox;
         return;
    default:
@@ -526,7 +507,6 @@ srand( (unsigned) time(NULL) * getpid()*(rand()%255));
         msgbox->setText("Something else went wrong");
         msgbox->exec();
         delete EncryptedAESKey;
-        delete RandKey;
         delete msgbox;
         return;
     }
@@ -537,18 +517,19 @@ srand( (unsigned) time(NULL) * getpid()*(rand()%255));
         ui->AREncOutput->setPlainText(EncData->toBase64());
         ui->AREncInput->setPlainText("");
         break;
-   default:
+    default:
         msgbox->setIcon(QMessageBox::Icon::Critical);
         msgbox->setText("Something else went wrong");
         msgbox->exec();
         delete EncryptedAESKey;
-        delete RandKey;
         delete msgbox;
         return;
     }
+
+    // Cleanup
+    memset(RandKey, 0, KeySize); // Erase the key from existance
     delete EncryptedAESKey;
     delete EncData;
-    delete RandKey;
     delete msgbox;
 }
 
