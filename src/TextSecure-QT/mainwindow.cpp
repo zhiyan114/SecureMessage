@@ -63,7 +63,13 @@ void MainWindow::on_DecryptBtn_clicked()
     QMessageBox * msgbox = new QMessageBox(this);
     msgbox->setWindowTitle("AES Encryption");
     QByteArray * Result = new QByteArray();
-    switch(Encryption::IAES::Decrypt(ui->KeyInput->text().toUtf8(),QByteArray::fromBase64(ui->DecInput->toPlainText().toUtf8()),Result)) {
+    QByteArray EncKey = ui->KeyInput->text().toUtf8();
+
+    // Check if the key is supposed to be hashed
+    if(!ui->isRawKey->isChecked())
+        Utils::SHA256(&EncKey);
+
+    switch(Encryption::IAES::Decrypt(EncKey,QByteArray::fromBase64(ui->DecInput->toPlainText().toUtf8()),Result)) {
     case 1:
         ui->DecOutput->setPlainText(QString::fromUtf8(*Result));
         ui->MessageStatus->setText("Message is original: Yes");
